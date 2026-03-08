@@ -8,11 +8,11 @@ type User struct {
 	NickName       string `gorm:"not null"`
 	PasswordDigest string
 	Avatar         string
-	Vedios         []Vedio `gorm:"foreignKey:UserID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL"`
+	Videos         []Video `gorm:"foreignKey:UserID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL"`
 }
 
-func GetUser(id interface{}) User {
+func GetUserByID(id uint) (*User, error) {
 	var user User
-	Db.Where("id = ?", id).Find(&user)
-	return user
+	err := Db.Where("id = ?", id).Find(&user).Error
+	return &user, err
 }

@@ -13,10 +13,10 @@ type UserRegister struct {
 	PasswordConfirm string `form:"password_confirm" json:"password_confirm" binding:"required,min=8,max=40"`
 }
 
-func (useregister UserRegister) Register() (model.User, *serializer.Response) {
+func (useregister UserRegister) Register() (*model.User, *serializer.Response) {
 	var user model.User
 	if useregister.PasswordConfirm != useregister.Password {
-		return user, &serializer.Response{
+		return &user, &serializer.Response{
 			Status: 400,
 			Msg:    "两次输入密码不一致",
 		}
@@ -24,14 +24,14 @@ func (useregister UserRegister) Register() (model.User, *serializer.Response) {
 
 	var count int64
 	if model.Db.Where("user_name = ?", useregister.UserName).Take(&user).Count(&count); count != 0 {
-		return user, &serializer.Response{
+		return &user, &serializer.Response{
 			Status: 409,
 			Msg:    "用户名已存在",
 		}
 	}
 
 	if model.Db.Where("nick_name = ?", useregister.NickName).Take(&user).Count(&count); count != 0 {
-		return user, &serializer.Response{
+		return &user, &serializer.Response{
 			Status: 409,
 			Msg:    "昵称已被占用",
 		}
@@ -40,7 +40,7 @@ func (useregister UserRegister) Register() (model.User, *serializer.Response) {
 	user.UserName = useregister.UserName
 	passworddigest, err := utils.HashPassword(useregister.Password)
 	if err != nil {
-		return user, &serializer.Response{
+		return &user, &serializer.Response{
 			Status: 500,
 			Msg:    "加密失败",
 		}
@@ -48,11 +48,11 @@ func (useregister UserRegister) Register() (model.User, *serializer.Response) {
 	user.PasswordDigest = passworddigest
 	err = model.Db.Create(&user).Error
 	if err != nil {
-		return user, &serializer.Response{
+		return &user, &serializer.Response{
 			Status: 500,
 			Msg:    "用户创建失败",
 		}
 	}
-	return user, nil
+	return &user, nil
 
 }

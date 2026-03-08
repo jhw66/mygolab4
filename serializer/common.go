@@ -9,16 +9,23 @@ type Response struct {
 	Error  string      `json:"error"`
 }
 
-func BuildUserResponse(user *model.User) Response {
-	return Response{
+func BuildUserResponse(user *model.User) *Response {
+	return &Response{
 		Status: 200,
 		Data:   BuildUser(user),
 	}
 }
 
-func BuildVedioResponse(vedio *model.Vedio) Response {
-	return Response{
+func BuildVideoResponse(video *model.Video) *Response {
+	return &Response{
 		Status: 200,
-		Data:   BuildVedio(vedio),
+		Data:   BuildVideo(video),
+	}
+}
+
+func BuildVideoListResponse(video *[]model.Video) *Response {
+	return &Response{
+		Status: 200,
+		Data:   BuildVideoList(video),
 	}
 }

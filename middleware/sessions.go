@@ -17,10 +17,15 @@ func Session(secret string) gin.HandlerFunc {
 func CurrentAccount() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		session := sessions.Default(c)
-		id := session.Get("user_id")
-		if id != nil {
-			user := model.GetUser(id)
-			c.Set("user", &user)
+		rawID := session.Get("user_id")
+		if rawID != nil {
+			userID, ok := rawID.(uint)
+			if ok {
+				user, err := model.GetUserByID(userID)
+				if err == nil && user != nil {
+					c.Set("user", user)
+				}
+			}
 		}
 		c.Next()
 	}
@@ -28,16 +33,25 @@ func CurrentAccount() gin.HandlerFunc {
 
 func AuthLogin() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		if user, _ := c.Get("user"); user != nil {
-			if _, ok := user.(*model.User); ok {
-				c.Next()
-				return
-			}
+		user, exists := c.Get("user")
+		if !exists {
+			c.JSON(401, serializer.Response{
+				Status: 401,
+				Msg:    "需要登录",
+			})
+			c.Abort()
+			return
 		}
-		c.JSON(401, serializer.Response{
-			Status: 401,
-			Msg:    "需要登录",
-		})
-		c.Abort()
+
+		if _, ok := user.(*model.User); !ok {
+			c.JSON(401, serializer.Response{
+				Status: 401,
+				Msg:    "需要登录",
+			})
+			c.Abort()
+			return
+		}
+		c.Next()
 	}
+
 }

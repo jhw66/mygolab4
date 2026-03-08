@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/gin-contrib/sessions"
@@ -20,7 +21,7 @@ func UserRegister(c *gin.Context) {
 		if user, err := useregister.Register(); err != nil {
 			c.JSON(err.Status, err)
 		} else {
-			res := serializer.BuildUserResponse(&user)
+			res := serializer.BuildUserResponse(user)
 			c.JSON(200, res)
 		}
 	} else {
@@ -96,7 +97,7 @@ func UserAvatar(c *gin.Context) {
 	}
 
 	user, _ := userValue.(*model.User)
-	file, err := c.FormFile("file")
+	file, err := c.FormFile("avatar")
 	if err != nil {
 		c.JSON(400, serializer.Response{
 			Status: 400,
@@ -104,7 +105,6 @@ func UserAvatar(c *gin.Context) {
 		})
 		return
 	}
-
 	ext := filepath.Ext(file.Filename)
 	filename := fmt.Sprintf("avatar_%d_%d%s", user.ID, time.Now().Unix(), ext)
 
@@ -117,6 +117,14 @@ func UserAvatar(c *gin.Context) {
 		return
 	}
 
+	//删除旧头像
+	if user.Avatar != "" {
+		oldpath := strings.TrimPrefix(user.Avatar, "/")
+		if _, err := os.Stat(oldpath); err == nil {
+			os.Remove(oldpath)
+		}
+	}
+
 	savepath := filepath.Join(dir, filename)
 	if err := c.SaveUploadedFile(file, savepath); err != nil {
 		c.JSON(500, serializer.Response{
@@ -126,14 +134,9 @@ func UserAvatar(c *gin.Context) {
 		return
 	}
 
-	user.Avatar = "/" + savepath
-	if err := model.Db.Save(&user); err != nil {
-		c.JSON(500, serializer.Response{
-			Status: 500,
-			Msg:    "更新用户头像失败",
-		})
-		return
+	user.Avatar = "/" + strings.ReplaceAll(savepath, "\\", "/")
+	if _, res := service.UploadAvatar(user); res != nil {
+		c.JSON(res.Status, res)
 	}
 	c.JSON(200, serializer.BuildUserResponse(user))
-
 }

@@ -10,8 +10,8 @@ type User struct {
 	Avatar    string `json:"avatar"`
 }
 
-func BuildUser(user *model.User) User {
-	return User{
+func BuildUser(user *model.User) *User {
+	return &User{
 		ID:        user.ID,
 		UserName:  user.UserName,
 		NickName:  user.NickName,

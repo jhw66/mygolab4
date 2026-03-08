@@ -1,5 +1,5 @@
 package model
 
 func Migrate() {
-	Db.AutoMigrate(&User{}, &Vedio{})
+	Db.AutoMigrate(&User{}, &Video{})
 }

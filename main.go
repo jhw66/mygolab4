@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/jhw66/myvideo_lab4/cache"
 	"github.com/jhw66/myvideo_lab4/model"
 	"github.com/jhw66/myvideo_lab4/router"
 )
@@ -13,6 +14,7 @@ func main() {
 	if _, err := model.InitDB(); err != nil {
 		panic(err)
 	}
+	cache.InitRedis()
 
 	router.NewRouter(r)
 

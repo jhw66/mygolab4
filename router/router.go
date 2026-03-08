@@ -13,17 +13,38 @@ func NewRouter(r *gin.Engine) {
 	v1 := r.Group("/api/v1")
 	{
 		//用户注册
-		v1.POST("user/register", api.UserRegister)
+		v1.POST("/user/register", api.UserRegister)
 
 		//用户登录
-		v1.POST("user/login", api.UserLogin)
+		v1.POST("/user/login", api.UserLogin)
+
+		//搜索视频
+		v1.GET("/videos")
+		v1.GET("/videos/:id")
+
+		//排行榜
+		v1.GET("/video/rank", api.RankVideos)
 
 		//保护接口
-		p := v1.Group("/")
+		p := v1.Group("/p")
 		p.Use(sessions.AuthLogin())
 		{
-			p.GET("user/me", api.UserMe)
-			p.POST("user/logout", api.UserLogout)
+			//用户详情
+			p.GET("/user/me", api.UserMe)
+			//登出
+			p.POST("/user/logout", api.UserLogout)
+			//上传头像
+			p.POST("/user/avatar", api.UserAvatar)
+
+			//上传视频
+			p.POST("/video", api.UploadVideo)
+			//查看视频
+			p.GET("/video/me", api.MyVideo)
+			//更新视频
+			p.PUT("video/:id", api.UpdateVideo)
+			//删除视频
+			p.DELETE("video/:id", api.DeleteVideo)
 		}
+
 	}
 }
