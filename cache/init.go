@@ -12,11 +12,12 @@ var (
 )
 
 func InitRedis() {
-	Rdb = redis.NewClient(&redis.Options{
+	options := &redis.Options{
 		Addr:     "127.0.0.1:6379",
 		Password: "",
-		DB:       1,
-	})
+		DB:       10,
+	}
+	Rdb = redis.NewClient(options)
 
 	_, err := Rdb.Ping(Ctx).Result()
 	if err != nil {

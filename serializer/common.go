@@ -23,9 +23,23 @@ func BuildVideoResponse(video *model.Video) *Response {
 	}
 }
 
-func BuildVideoListResponse(video *[]model.Video) *Response {
+func BuildVideoListResponse(videos *[]model.Video) *Response {
 	return &Response{
 		Status: 200,
-		Data:   BuildVideoList(video),
+		Data:   BuildVideoList(videos),
+	}
+}
+
+func BuildCommentResponse(comment *model.Comment) *Response {
+	return &Response{
+		Status: 200,
+		Data:   BuildComment(comment),
+	}
+}
+
+func BuildCommentListResponse(comments *[]model.Comment, total int64, page int, pageSize int) *Response {
+	return &Response{
+		Status: 200,
+		Data:   BuildCommentList(comments, total, page, pageSize),
 	}
 }

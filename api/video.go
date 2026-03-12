@@ -2,7 +2,6 @@ package api
 
 import (
 	"encoding/json"
-	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -18,7 +17,7 @@ func RankVideos(c *gin.Context) {
 	if err == nil {
 		var res []serializer.Video
 		if err := json.Unmarshal([]byte(val), &res); err == nil {
-			c.JSON(http.StatusOK, serializer.Response{
+			c.JSON(200, serializer.Response{
 				Status: 200,
 				Msg:    "获取热门排行榜成功from redis",
 				Data:   res,
@@ -41,9 +40,26 @@ func RankVideos(c *gin.Context) {
 		cache.Rdb.Set(cache.Ctx, redisKey, data, 5*time.Minute)
 	}
 
-	c.JSON(http.StatusOK, serializer.Response{
+	c.JSON(200, serializer.Response{
 		Status: 200,
 		Msg:    "获取热门排行榜成功from mysql",
 		Data:   res,
 	})
+}
+
+func VideoSearch(c *gin.Context) {
+	var videosearch service.VideoSearch
+	if err := c.ShouldBind(&videosearch); err != nil {
+		c.JSON(404, serializer.Response{
+			Status: 404,
+			Msg:    "搜索词不能为空",
+		})
+		return
+	}
+	videos, err := videosearch.FindVideosByKeyword()
+	if err != nil {
+		c.JSON(err.Status, err)
+		return
+	}
+	c.JSON(200, serializer.BuildVideoListResponse(videos))
 }

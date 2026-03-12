@@ -9,7 +9,11 @@ type Video struct {
 	URL           string
 	Info          string
 	Cover         string
-	View          uint
+	CommentCount  uint
 	FavoriteCount uint
 	User          User `gorm:"foreignKey:UserID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL"`
+}
+
+func (Video) TableName() string {
+	return "video"
 }

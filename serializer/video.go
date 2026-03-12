@@ -8,7 +8,7 @@ type Video struct {
 	URL           string `json:"url"`
 	Info          string `json:"info"`
 	Cover         string `json:"avatar"`
-	View          uint   `json:"views"`
+	CommentCount  uint   `json:"comment_counts"`
 	FavoriteCount uint   `json:"favorite_counts"`
 	CreatedAt     int64  `json:"created_at"`
 }
@@ -20,7 +20,7 @@ func BuildVideo(video *model.Video) *Video {
 		URL:           video.URL,
 		Info:          video.Info,
 		Cover:         video.Cover,
-		View:          video.View,
+		CommentCount:  video.CommentCount,
 		FavoriteCount: video.FavoriteCount,
 		CreatedAt:     video.CreatedAt.Unix(),
 	}

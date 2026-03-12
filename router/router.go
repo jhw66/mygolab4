@@ -19,8 +19,7 @@ func NewRouter(r *gin.Engine) {
 		v1.POST("/user/login", api.UserLogin)
 
 		//搜索视频
-		v1.GET("/videos")
-		v1.GET("/videos/:id")
+		v1.GET("/videos/search", api.VideoSearch)
 
 		//排行榜
 		v1.GET("/video/rank", api.RankVideos)
@@ -44,6 +43,18 @@ func NewRouter(r *gin.Engine) {
 			p.PUT("video/:id", api.UpdateVideo)
 			//删除视频
 			p.DELETE("video/:id", api.DeleteVideo)
+
+			//点赞操作
+			p.POST("/favorite/:vid", api.Favorite)
+			//用户点赞列表
+			p.GET("/favoriteList/me", api.FavoriteList)
+
+			//评论操作
+			p.POST("/comment/:vid", api.Comment)
+			//视频评论列表
+			p.GET("/comment/:vid", api.CommentList)
+			//删除评论
+			p.DELETE("/comment/:cid", api.DelComment)
 		}
 
 	}

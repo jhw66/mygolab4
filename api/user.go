@@ -50,7 +50,7 @@ func UserLogin(c *gin.Context) {
 			s.Clear()
 			s.Set("user_id", user.ID)
 			s.Save()
-			res := serializer.BuildUserResponse(&user)
+			res := serializer.BuildUserResponse(user)
 			c.JSON(200, res)
 		}
 

@@ -76,13 +76,11 @@ func UploadVideo(c *gin.Context) {
 		c.SaveUploadedFile(coverFile, coverPath)
 
 		video := model.Video{
-			UserID:        user.ID,
-			Title:         title,
-			Info:          info,
-			URL:           "/" + videoPath,
-			Cover:         "/" + coverPath,
-			View:          0,
-			FavoriteCount: 0,
+			UserID: user.ID,
+			Title:  title,
+			Info:   info,
+			URL:    "/" + videoPath,
+			Cover:  "/" + coverPath,
 		}
 
 		if _, err := service.UploadVideo(tx, &video); err != nil {
@@ -109,7 +107,6 @@ func MyVideo(c *gin.Context) {
 
 func UpdateVideo(c *gin.Context) {
 	model.Db.Transaction(func(tx *gorm.DB) error {
-
 		userValue, _ := c.Get("user")
 		user := userValue.(*model.User)
 
@@ -203,13 +200,11 @@ func UpdateVideo(c *gin.Context) {
 		c.SaveUploadedFile(coverFile, coverPath)
 
 		video = &model.Video{
-			UserID:        user.ID,
-			Title:         title,
-			Info:          info,
-			URL:           "/" + videoPath,
-			Cover:         "/" + coverPath,
-			View:          0,
-			FavoriteCount: 0,
+			UserID: user.ID,
+			Title:  title,
+			Info:   info,
+			URL:    "/" + videoPath,
+			Cover:  "/" + coverPath,
 		}
 
 		if _, err := service.UploadVideo(tx, video); err != nil {

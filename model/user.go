@@ -11,6 +11,10 @@ type User struct {
 	Videos         []Video `gorm:"foreignKey:UserID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL"`
 }
 
+func (User) TableName() string {
+	return "user"
+}
+
 func GetUserByID(id uint) (*User, error) {
 	var user User
 	err := Db.Where("id = ?", id).Find(&user).Error
