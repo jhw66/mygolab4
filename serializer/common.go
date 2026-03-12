@@ -16,6 +16,12 @@ func BuildUserResponse(user *model.User) *Response {
 	}
 }
 
+func BuildUserListResponse(users *[]model.User) *Response {
+	return &Response{
+		Status: 200,
+		Data:   BuildUserList(users),
+	}
+}
 func BuildVideoResponse(video *model.Video) *Response {
 	return &Response{
 		Status: 200,

@@ -19,3 +19,11 @@ func BuildUser(user *model.User) *User {
 		Avatar:    user.Avatar,
 	}
 }
+
+func BuildUserList(users *[]model.User) *[]User {
+	var userlist []User
+	for key, _ := range *users {
+		userlist = append(userlist, *BuildUser(&(*users)[key]))
+	}
+	return &userlist
+}

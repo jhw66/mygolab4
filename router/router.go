@@ -24,6 +24,9 @@ func NewRouter(r *gin.Engine) {
 		//排行榜
 		v1.GET("/video/rank", api.RankVideos)
 
+		//视频评论列表
+		v1.GET("/comment/:vid", api.CommentList)
+
 		//保护接口
 		p := v1.Group("/p")
 		p.Use(sessions.AuthLogin())
@@ -51,10 +54,17 @@ func NewRouter(r *gin.Engine) {
 
 			//评论操作
 			p.POST("/comment/:vid", api.Comment)
-			//视频评论列表
-			p.GET("/comment/:vid", api.CommentList)
 			//删除评论
 			p.DELETE("/comment/:cid", api.DelComment)
+
+			//关注操作
+			p.POST("/relation/:uid", api.RelationAction)
+			//关注列表
+			p.GET("/relation/following", api.FollowingList)
+			//粉丝列表
+			p.GET("/relation/follower", api.FollowerList)
+			//好友列表
+			p.GET("/relation/friend", api.FriendList)
 		}
 
 	}

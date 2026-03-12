@@ -17,6 +17,6 @@ func (User) TableName() string {
 
 func GetUserByID(id uint) (*User, error) {
 	var user User
-	err := Db.Where("id = ?", id).Find(&user).Error
+	err := Db.Where("id = ?", id).Take(&user).Error
 	return &user, err
 }

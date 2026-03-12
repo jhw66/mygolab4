@@ -5,5 +5,5 @@ func Migrate() {
 	Db.SetupJoinTable(&Video{}, "user", &Favorite{})
 	Db.SetupJoinTable(&User{}, "video", &Comment{})
 	Db.SetupJoinTable(&Video{}, "user", &Comment{})
-	Db.AutoMigrate(&User{}, &Video{}, &Favorite{}, &Comment{})
+	Db.AutoMigrate(&User{}, &Video{}, &Favorite{}, &Comment{}, &Relation{})
 }

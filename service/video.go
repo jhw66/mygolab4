@@ -43,7 +43,7 @@ func DeleteVideo(tx *gorm.DB, vid uint) (*model.Video, *serializer.Response) {
 
 func GetRankVideos(limit int) ([]model.Video, error) {
 	var videos []model.Video
-	err := model.Db.Order("favorite_count desc").Order("view desc").Order("created_at desc").
+	err := model.Db.Order("favorite_count desc").Order("comment_count desc").Order("created_at desc").
 		Limit(limit).Find(&videos).Error
 	return videos, err
 }
