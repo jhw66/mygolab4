@@ -3,12 +3,12 @@ package router
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/jhw66/myvideo_lab4/api"
-	sessions "github.com/jhw66/myvideo_lab4/middleware"
+	middleware "github.com/jhw66/myvideo_lab4/middleware"
 )
 
 func NewRouter(r *gin.Engine) {
-	r.Use(sessions.Session("secret"))
-	r.Use(sessions.CurrentAccount())
+	// r.Use(middleware.Session("secret"))
+	// r.Use(middleware.CurrentAccount())
 
 	v1 := r.Group("/api/v1")
 	{
@@ -27,9 +27,13 @@ func NewRouter(r *gin.Engine) {
 		//视频评论列表
 		v1.GET("/comment/:vid", api.CommentList)
 
+		//刷新access令牌
+		v1.POST("/refresh", api.RefreshHandler)
+
 		//保护接口
 		p := v1.Group("/p")
-		p.Use(sessions.AuthLogin())
+		// p.Use(middleware.AuthLogin())
+		p.Use(middleware.AccessAuthProtect())
 		{
 			//用户详情
 			p.GET("/user/me", api.UserMe)
