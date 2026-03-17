@@ -1,6 +1,6 @@
 已完成用户，视频，互动，社交模块
 
-注册登录采用的是session，用cookie存储
+注册登录采用的是双token，用cookie存储
 
 更新视频部分用了mysql的事务
 
@@ -16,7 +16,6 @@
 按照文档改一下各个要求
 把gin换成其他现代HTTP框架
 完成Docker部署
-使用双token
 实现视频的分片上传与存储
 实现WebSocket 聊天功能
 引入ElasticSearch
