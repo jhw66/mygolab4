@@ -1,23 +1,36 @@
 package main
 
 import (
+	"log"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jhw66/myvideo_lab4/cache"
+	"github.com/jhw66/myvideo_lab4/config"
 	"github.com/jhw66/myvideo_lab4/model"
 	"github.com/jhw66/myvideo_lab4/router"
 	"github.com/jhw66/myvideo_lab4/service"
+	"github.com/joho/godotenv"
 )
 
 func main() {
 	r := gin.Default()
 	r.Static("/static", "./static")
 
-	if _, err := model.InitDB(); err != nil {
+	err := godotenv.Load()
+	if err != nil {
+		log.Panicln(".env file not found")
+	}
+
+	cfg, err := config.LoadConfig()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if _, err := model.InitDB(cfg); err != nil {
 		panic(err)
 	}
-	cache.InitRedis()
+	cache.InitRedis(cfg)
 
 	router.NewRouter(r)
 	go service.SyncFavoirte()
@@ -29,5 +42,5 @@ func main() {
 		}
 	}()
 
-	r.Run(":80")
+	r.Run(":" + cfg.RunPort)
 }
