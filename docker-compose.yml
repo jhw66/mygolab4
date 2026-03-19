@@ -1,0 +1,48 @@
+version: "3.8"
+
+services:
+  myvideo_lab4:
+    build:
+      context: .
+      dockerfile: Dockerfile  
+    ports:
+      - "8080:8080"
+    environment:
+      - ENV_PATH=/lab4/.env
+      - REDIS_HOST=redis
+      - MYSQL_HOST=mysql
+    volumes:
+      - ./static:/lab4/static
+      - ./.env:/lab4/.env
+      - ./wait-for-it.sh:/lab4/wait-for-it.sh  
+    depends_on:
+      - redis
+      - mysql
+    networks:
+      - backend
+    command: /bin/sh -c "/lab4/wait-for-it.sh mysql 3306 -- /lab4/wait-for-it.sh redis 6379 -- /lab4/myvideo_lab4"
+
+  redis:
+    image: "redis:alpine"
+    container_name: redis
+    ports:
+      - "6379:6379"
+    networks:
+      - backend
+
+  mysql:
+    image: "mysql:8.0"
+    container_name: mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: Wujiahui789
+      MYSQL_DATABASE: myvedio_lab4
+    ports:
+      - "3307:3306"
+    volumes:
+      - ./mysql-init:/docker-entrypoint-initdb.d 
+    networks:
+      - backend
+
+networks:
+  backend:
+    driver: bridge

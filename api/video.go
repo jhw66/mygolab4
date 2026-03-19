@@ -37,7 +37,7 @@ func RankVideos(c *gin.Context) {
 	res := serializer.BuildVideoList(&videos)
 
 	if data, err := json.Marshal(res); err == nil {
-		cache.Rdb.Set(cache.Ctx, redisKey, data, 5*time.Minute)
+		cache.Rdb.Set(cache.Ctx, redisKey, data, 15*time.Second)
 	}
 
 	c.JSON(200, serializer.Response{
