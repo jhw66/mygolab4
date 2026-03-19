@@ -12,10 +12,11 @@
 
 社交部分就是普通的curd
 
+完成Docker部署，并且传到了docker hub上，就是pull下来总是启动失败(研究ing)
+
 还没做到的部分(正在做)：
 按照文档改一下各个要求
 把gin换成其他现代HTTP框架
-完成Docker部署
 实现视频的分片上传与存储
 实现WebSocket 聊天功能
 引入ElasticSearch
