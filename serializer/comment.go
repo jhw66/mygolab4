@@ -3,9 +3,9 @@ package serializer
 import "github.com/jhw66/myvideo_lab4/model"
 
 type Comment struct {
-	ID        uint   `json:"id"`
-	UserID    uint   `json:"user_id"`
-	VideoID   uint   `json:"video_id"`
+	ID        string `json:"id"`
+	UserID    string `json:"user_id"`
+	VideoID   string `json:"video_id"`
 	Content   string `json:"content"`
 	CreatedAt int64  `json:"created_at"`
 	User      User   `json:"users"`
@@ -31,7 +31,7 @@ func BuildComment(comment *model.Comment) *Comment {
 
 func BuildCommentList(comments *[]model.Comment, total int64, page int, pageSize int) *CommentList {
 	var res []Comment
-	for key, _ := range *comments {
+	for key := range *comments {
 		res = append(res, *BuildComment(&(*comments)[key]))
 	}
 	return &CommentList{

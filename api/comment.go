@@ -1,8 +1,6 @@
 package api
 
 import (
-	"strconv"
-
 	"github.com/gin-gonic/gin"
 	"github.com/jhw66/myvideo_lab4/model"
 	"github.com/jhw66/myvideo_lab4/serializer"
@@ -21,15 +19,15 @@ func Comment(c *gin.Context) {
 	userValue, _ := c.Get("user")
 	user := userValue.(*model.User)
 
-	vid, _ := strconv.Atoi(c.Param("vid"))
-	_, err := service.FindVideoByVid(uint(vid))
+	vid := c.Param("vid")
+	_, err := service.FindVideoByVid(vid)
 	if err != nil {
 		c.JSON(err.Status, err)
 		return
 	}
 
 	comment.Uid = user.ID
-	comment.Vid = uint(vid)
+	comment.Vid = vid
 
 	com, err := comment.AddComment()
 	if err != nil {
@@ -51,9 +49,9 @@ func CommentList(c *gin.Context) {
 		return
 	}
 
-	vid, _ := strconv.Atoi(c.Param("vid"))
-	comment.Vid = uint(vid)
-	_, err := service.FindVideoByVid(uint(vid))
+	vid := c.Param("vid")
+	comment.Vid = vid
+	_, err := service.FindVideoByVid(vid)
 	if err != nil {
 		c.JSON(err.Status, err)
 		return
@@ -74,10 +72,8 @@ func DelComment(c *gin.Context) {
 	userValue, _ := c.Get("user")
 	user := userValue.(*model.User)
 
-	cid, _ := strconv.Atoi(c.Param("cid"))
-
 	comment.Uid = user.ID
-	comment.Cid = uint(cid)
+	comment.Cid = c.Param("cid")
 
 	_, err := comment.DelComment()
 	if err != nil {

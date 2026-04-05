@@ -3,7 +3,7 @@ package serializer
 import "github.com/jhw66/myvideo_lab4/model"
 
 type User struct {
-	ID        uint   `json:"id"`
+	ID        string `json:"id"`
 	UserName  string `json:"username"`
 	NickName  string `json:"nickname"`
 	CreatedAt int64  `json:"created_at"`
@@ -22,7 +22,7 @@ func BuildUser(user *model.User) *User {
 
 func BuildUserList(users *[]model.User) *[]User {
 	var userlist []User
-	for key, _ := range *users {
+	for key := range *users {
 		userlist = append(userlist, *BuildUser(&(*users)[key]))
 	}
 	return &userlist

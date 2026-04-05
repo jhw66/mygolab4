@@ -2,7 +2,6 @@ package main
 
 import (
 	"log"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jhw66/myvideo_lab4/cache"
@@ -10,6 +9,7 @@ import (
 	"github.com/jhw66/myvideo_lab4/model"
 	"github.com/jhw66/myvideo_lab4/router"
 	"github.com/jhw66/myvideo_lab4/service"
+	"github.com/jhw66/myvideo_lab4/utils"
 	"github.com/joho/godotenv"
 )
 
@@ -27,20 +27,20 @@ func main() {
 		log.Fatal(err)
 	}
 
+	if err := utils.InitSnowflake(1); err != nil {
+		log.Fatal(err)
+	}
+
 	if _, err := model.InitDB(cfg); err != nil {
 		panic(err)
 	}
 	cache.InitRedis(cfg)
 
+	service.WarmUpRankZSet()
+
 	router.NewRouter(r)
-	go service.SyncFavoirte()
-	go func() {
-		ticker := time.NewTicker(15 * time.Second)
-		for range ticker.C {
-			service.SyncFavoriteCount()
-			service.SyncCommentCount()
-		}
-	}()
+
+	go service.StartVideoStatSync()
 
 	r.Run(":" + cfg.RunPort)
 }

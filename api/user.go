@@ -204,7 +204,7 @@ func UserAvatar(c *gin.Context) {
 		return
 	}
 	ext := filepath.Ext(file.Filename)
-	filename := fmt.Sprintf("avatar_%d_%d%s", user.ID, time.Now().Unix(), ext)
+	filename := fmt.Sprintf("avatar_%s_%d%s", user.ID, time.Now().Unix(), ext)
 
 	dir := "static/avatar"
 	if err := os.MkdirAll(dir, os.ModePerm); err != nil {

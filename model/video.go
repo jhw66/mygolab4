@@ -1,17 +1,16 @@
 package model
 
-import "gorm.io/gorm"
-
 type Video struct {
-	gorm.Model
-	UserID        uint
+	BaseModel
+	UserID        string
 	Title         string
 	URL           string
 	Info          string
 	Cover         string
 	CommentCount  uint
 	FavoriteCount uint
-	User          User `gorm:"foreignKey:UserID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL"`
+	HotScore      uint64 `gorm:"index:idx_video_hot_rank,priority:1"`
+	User          User   `gorm:"foreignKey:UserID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL"`
 }
 
 func (Video) TableName() string {

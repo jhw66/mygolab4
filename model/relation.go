@@ -1,11 +1,9 @@
 package model
 
-import "gorm.io/gorm"
-
 type Relation struct {
-	gorm.Model
-	UserID       uint `gorm:"not null;index"`
-	TargetUserID uint `gorm:"not null;index"`
+	BaseModel
+	UserID       string `gorm:"not null;index;type:varchar(32)"`
+	TargetUserID string `gorm:"not null;index;type:varchar(32)"`
 }
 
 func (Relation) TableName() string {

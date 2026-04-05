@@ -10,12 +10,12 @@ import (
 var Secret = []byte("my_secret")
 
 type MyClaim struct {
-	UserID    uint   `json:"user_id"`
+	UserID    string `json:"user_id"`
 	TokenType string `json:"token_type"`
 	jwt.RegisteredClaims
 }
 
-func GenerateAccessToken(userID uint) (string, error) {
+func GenerateAccessToken(userID string) (string, error) {
 	claims := MyClaim{
 		UserID:    userID,
 		TokenType: "access",
@@ -29,7 +29,7 @@ func GenerateAccessToken(userID uint) (string, error) {
 	return token.SignedString(Secret)
 }
 
-func GenerateRefreshToken(userID uint) (string, error) {
+func GenerateRefreshToken(userID string) (string, error) {
 	claims := MyClaim{
 		UserID:    userID,
 		TokenType: "refresh",

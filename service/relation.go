@@ -7,7 +7,7 @@ import (
 
 type Relation struct{}
 
-func (Relation) RelationAction(tid uint, uid uint) *serializer.Response {
+func (Relation) RelationAction(tid string, uid string) *serializer.Response {
 	relation := model.Relation{
 		UserID:       uid,
 		TargetUserID: tid,
@@ -39,7 +39,7 @@ func (Relation) RelationAction(tid uint, uid uint) *serializer.Response {
 	}
 }
 
-func (Relation) FollowingList(uid uint) *serializer.Response {
+func (Relation) FollowingList(uid string) *serializer.Response {
 	var users []model.User
 	if err := model.Db.Table("user").Joins("join relation on relation.target_user_id = user.id").Where("relation.user_id = ?", uid).
 		Find(&users).Error; err != nil {
@@ -56,7 +56,7 @@ func (Relation) FollowingList(uid uint) *serializer.Response {
 	}
 }
 
-func (Relation) FollowerList(uid uint) *serializer.Response {
+func (Relation) FollowerList(uid string) *serializer.Response {
 	var users []model.User
 	if err := model.Db.Table("user").Joins("join relation on relation.user_id = user.id").Where("relation.target_user_id = ?", uid).
 		Find(&users).Error; err != nil {
@@ -73,7 +73,7 @@ func (Relation) FollowerList(uid uint) *serializer.Response {
 	}
 }
 
-func (Relation) FriendList(uid uint) *serializer.Response {
+func (Relation) FriendList(uid string) *serializer.Response {
 	var users []model.User
 
 	if err := model.Db.Table("user").

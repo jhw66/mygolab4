@@ -4,9 +4,6 @@ FROM golang:1.26-alpine AS builder
 # 设置工作目录
 WORKDIR /lab4
 
-# 安装依赖（git, bash, nc）
-RUN apk add --no-cache git bash netcat-openbsd  
-
 # 复制 go.mod 和 go.sum 文件并下载依赖
 COPY go.mod go.sum ./
 RUN go mod download
@@ -21,7 +18,7 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o myvideo_lab4
 FROM alpine:3.20
 
 # 安装运行 Go 应用所需的依赖包（ca-certificates 用于支持 HTTPS 请求）
-RUN apk update && apk add --no-cache ca-certificates netcat-openbsd  # 将 netcat 替换为 netcat-openbsd
+RUN apk update && apk add --no-cache ca-certificates netcat-openbsd  
 
 # 设置工作目录
 WORKDIR /lab4

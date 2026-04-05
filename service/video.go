@@ -1,8 +1,10 @@
 package service
 
 import (
+	"github.com/jhw66/myvideo_lab4/cache"
 	"github.com/jhw66/myvideo_lab4/model"
 	"github.com/jhw66/myvideo_lab4/serializer"
+	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 )
 
@@ -29,7 +31,7 @@ func (videosearch VideoSearch) FindVideosByKeyword() (*[]model.Video, *serialize
 	return &videos, nil
 }
 
-func DeleteVideo(tx *gorm.DB, vid uint) (*model.Video, *serializer.Response) {
+func DeleteVideo(tx *gorm.DB, vid string) (*model.Video, *serializer.Response) {
 	var video model.Video
 	tx.Where("id = ?", vid).Take(&video)
 	if err := tx.Delete(&video).Error; err != nil {
@@ -38,14 +40,8 @@ func DeleteVideo(tx *gorm.DB, vid uint) (*model.Video, *serializer.Response) {
 			Msg:    "删除视频失败",
 		}
 	}
+	cache.Rdb.ZRem(cache.Ctx, RankZSetKey, vid)
 	return &video, nil
-}
-
-func GetRankVideos(limit int) ([]model.Video, error) {
-	var videos []model.Video
-	err := model.Db.Order("favorite_count desc").Order("comment_count desc").Order("created_at desc").
-		Limit(limit).Find(&videos).Error
-	return videos, err
 }
 
 func FindVideoByUser(user *model.User) (*[]model.Video, *serializer.Response) {
@@ -59,7 +55,7 @@ func FindVideoByUser(user *model.User) (*[]model.Video, *serializer.Response) {
 	return &videos, nil
 }
 
-func FindVideoByVid(vid uint) (*model.Video, *serializer.Response) {
+func FindVideoByVid(vid string) (*model.Video, *serializer.Response) {
 	var video model.Video
 	if err := model.Db.Where("id = ?", vid).Take(&video).Error; err != nil {
 		return nil, &serializer.Response{
@@ -70,18 +66,37 @@ func FindVideoByVid(vid uint) (*model.Video, *serializer.Response) {
 	return &video, nil
 }
 
-func CompareVidAndUid(uid uint, vid uint) bool {
+func CompareVidAndUid(uid string, vid string) bool {
 	var video model.Video
 	model.Db.Model(&video).Where("id = ?", vid).Take(&video)
 	return video.UserID == uid
 }
 
 func UploadVideo(tx *gorm.DB, video *model.Video) (*model.Video, *serializer.Response) {
-	if err := tx.Save(video).Error; err != nil {
+	if err := tx.Create(video).Error; err != nil {
 		return nil, &serializer.Response{
 			Status: 500,
 			Msg:    "上传视频失败",
 		}
 	}
+	cache.Rdb.ZAdd(cache.Ctx, RankZSetKey, redis.Z{
+		Score:  float64(video.HotScore),
+		Member: video.ID,
+	})
+	return video, nil
+}
+
+func UpdateVideo(tx *gorm.DB, video *model.Video) (*model.Video, *serializer.Response) {
+	video.HotScore = CalculateHotScore(video.FavoriteCount, video.CommentCount)
+	if err := tx.Save(video).Error; err != nil {
+		return nil, &serializer.Response{
+			Status: 500,
+			Msg:    "更新视频失败",
+		}
+	}
+	cache.Rdb.ZAdd(cache.Ctx, RankZSetKey, redis.Z{
+		Score:  float64(video.HotScore),
+		Member: video.ID,
+	})
 	return video, nil
 }

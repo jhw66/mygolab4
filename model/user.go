@@ -1,9 +1,7 @@
 package model
 
-import "gorm.io/gorm"
-
 type User struct {
-	gorm.Model
+	BaseModel
 	UserName       string `gorm:"unique;not null"`
 	NickName       string `gorm:"not null"`
 	PasswordDigest string
@@ -15,7 +13,7 @@ func (User) TableName() string {
 	return "user"
 }
 
-func GetUserByID(id uint) (*User, error) {
+func GetUserByID(id string) (*User, error) {
 	var user User
 	err := Db.Where("id = ?", id).Take(&user).Error
 	return &user, err

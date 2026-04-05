@@ -1,8 +1,6 @@
 package api
 
 import (
-	"strconv"
-
 	"github.com/gin-gonic/gin"
 	"github.com/jhw66/myvideo_lab4/model"
 	"github.com/jhw66/myvideo_lab4/serializer"
@@ -11,13 +9,12 @@ import (
 
 func RelationAction(c *gin.Context) {
 	var relation service.Relation
-	uidValue := c.Param("uid")
-	targetID, _ := strconv.ParseUint(uidValue, 10, 64)
+	targetID := c.Param("uid")
 
 	userValue, _ := c.Get("user")
 	user := userValue.(*model.User)
 
-	_, err := model.GetUserByID(uint(targetID))
+	_, err := model.GetUserByID(targetID)
 	if err != nil {
 		c.JSON(404, serializer.Response{
 			Status: 404,
@@ -26,7 +23,7 @@ func RelationAction(c *gin.Context) {
 		return
 	}
 
-	if user.ID == uint(targetID) {
+	if user.ID == targetID {
 		c.JSON(400, serializer.Response{
 			Status: 400,
 			Msg:    "不可关注自己",
@@ -34,7 +31,7 @@ func RelationAction(c *gin.Context) {
 		return
 	}
 
-	res := relation.RelationAction(uint(targetID), user.ID)
+	res := relation.RelationAction(targetID, user.ID)
 
 	c.JSON(res.Status, res)
 }

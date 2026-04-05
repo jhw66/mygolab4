@@ -1,134 +1,135 @@
 package service
 
 import (
+	"errors"
 	"fmt"
-	"strconv"
+	"time"
 
+	mysqlDriver "github.com/go-sql-driver/mysql"
 	"github.com/jhw66/myvideo_lab4/cache"
 	"github.com/jhw66/myvideo_lab4/model"
 	"github.com/jhw66/myvideo_lab4/serializer"
+	"gorm.io/gorm"
 )
 
 type Favorite struct {
-	Uid int
-	Vid int
+	Uid string
+	Vid string
 }
 
-const redisChangeKey = "favorite:change_videos:"
+const favoriteCountTTL = 24 * time.Hour
+
+func buildFavoriteCountKey(vid string) string {
+	return "favorite_count:video:" + vid
+}
 
 func (favorite Favorite) Favorite() *serializer.Response {
-	redisKey := "favorite:video:" + strconv.Itoa(favorite.Vid)
-	redisCountKey := "favorite_count:video:" + strconv.Itoa(favorite.Vid)
-
-	if err := favorite.CacheWarmUp(redisKey, redisCountKey); err != nil {
-		return &serializer.Response{
-			Status: 500,
-			Msg:    "缓存预热失败",
-		}
+	if err := favorite.WarmUpFavoriteCount(); err != nil {
+		return &serializer.Response{Status: 500, Msg: "缓存预热失败"}
 	}
 
-	if cache.Rdb.SIsMember(cache.Ctx, redisKey, favorite.Uid).Val() {
-		if res := favorite.DeleteFavorite(); res != nil {
-			return &serializer.Response{
-				Status: res.Status,
-				Msg:    res.Msg,
-			}
-		}
-		change := fmt.Sprintf("delete:%d:%d", favorite.Uid, favorite.Vid)
-		cache.Rdb.LPush(cache.Ctx, redisChangeKey, change)
-		return &serializer.Response{
-			Status: 200,
-			Msg:    "取消点赞成功",
-		}
-
+	liked, res := favorite.toggleByMySQL()
+	if res != nil {
+		return res
 	}
 
-	if _, err := cache.Rdb.SAdd(cache.Ctx, redisKey, favorite.Uid).Result(); err != nil {
-		return &serializer.Response{
-			Status: 500,
-			Msg:    "点赞失败",
-		}
-	}
-	change := fmt.Sprintf("add:%d:%d", favorite.Uid, favorite.Vid)
-	cache.Rdb.LPush(cache.Ctx, redisChangeKey, change)
-	cache.Rdb.Incr(cache.Ctx, redisCountKey)
-	return &serializer.Response{
-		Status: 200,
-		Msg:    "点赞成功",
-	}
-}
+	UpdateRankScore(favorite.Vid)
 
-func (favorite Favorite) DeleteFavorite() *serializer.Response {
-	redisKey := "favorite:video:" + strconv.Itoa(favorite.Vid)
-	redisCountKey := "favorite_count:video:" + strconv.Itoa(favorite.Vid)
-
-	if _, err := cache.Rdb.SRem(cache.Ctx, redisKey, favorite.Uid).Result(); err != nil {
-		return &serializer.Response{
-			Status: 500,
-			Msg:    "取消点赞失败",
-		}
+	msg := "取消点赞成功"
+	if liked {
+		msg = "点赞成功"
 	}
-	cache.Rdb.Decr(cache.Ctx, redisCountKey)
-
-	return nil
-}
-
-func (favorite Favorite) GetFavorite() (uint, *serializer.Response) {
-	redisCountKey := "favorite_count:video:" + strconv.Itoa(favorite.Vid)
-	count, err := strconv.Atoi(cache.Rdb.Get(cache.Ctx, redisCountKey).Val())
-	if err != nil {
-		return 0, &serializer.Response{
-			Status: 500,
-			Msg:    "获取点赞数失败",
-		}
-	}
-	model.Db.Model(&model.Video{}).Where("id = ?", favorite.Vid).Update("favorite_count", uint(count))
-	return uint(count), nil
+	return &serializer.Response{Status: 200, Msg: msg}
 }
 
 func (favorite Favorite) GetUserFavorite() (*[]model.Video, *serializer.Response) {
 	var videos []model.Video
-
 	err := model.Db.
 		Joins("JOIN favorite ON favorite.video_id = video.id").
 		Where("favorite.user_id = ?", favorite.Uid).
 		Find(&videos).Error
-
 	if err != nil {
-		return nil, &serializer.Response{
-			Status: 500,
-			Msg:    "查询失败",
-		}
+		return nil, &serializer.Response{Status: 500, Msg: "查询失败"}
 	}
 	return &videos, nil
 }
 
-// 缓存预热
-func (favorite Favorite) CacheWarmUp(redisKey string, redisCountKey string) error {
-	if exists, _ := cache.Rdb.Exists(cache.Ctx, redisKey).Result(); exists == 0 {
-		var favorites []model.Favorite
-		var counts int64
-		model.Db.Where("video_id = ?", favorite.Vid).Find(&favorites).Count(&counts)
-		if counts == 0 {
-			return nil
-		}
-		for _, fav := range favorites {
-			if err := cache.Rdb.SAdd(cache.Ctx, redisKey, fav.UserID).Err(); err != nil {
-				return err
-			}
-		}
+func (favorite Favorite) WarmUpFavoriteCount() error {
+	countKey := buildFavoriteCountKey(favorite.Vid)
+
+	if exists, _ := cache.Rdb.Exists(cache.Ctx, countKey).Result(); exists > 0 {
+		return nil
 	}
 
-	if exists, _ := cache.Rdb.Exists(cache.Ctx, redisCountKey).Result(); exists == 0 {
-		var video model.Video
-		model.Db.Where("id = ?", favorite.Vid).Find(&video)
-		if video.FavoriteCount == 0 {
-			return nil
+	lockKey := fmt.Sprintf("warmup_lock:favorite:%s", favorite.Vid)
+	if !cache.TryWarmupLock(lockKey, 5*time.Second) {
+		time.Sleep(100 * time.Millisecond)
+		return nil
+	}
+
+	if exists, _ := cache.Rdb.Exists(cache.Ctx, countKey).Result(); exists > 0 {
+		return nil
+	}
+
+	var video model.Video
+	model.Db.Where("id = ?", favorite.Vid).Take(&video)
+	return cache.Rdb.Set(cache.Ctx, countKey, video.FavoriteCount, favoriteCountTTL).Err()
+}
+
+func (favorite Favorite) toggleByMySQL() (bool, *serializer.Response) {
+	liked := false
+
+	err := model.Db.Transaction(func(tx *gorm.DB) error {
+		var record model.Favorite
+		err := tx.Where("user_id = ? AND video_id = ?", favorite.Uid, favorite.Vid).Take(&record).Error
+		if err == nil {
+			result := tx.Where("user_id = ? AND video_id = ?", favorite.Uid, favorite.Vid).Delete(&model.Favorite{})
+			if result.Error != nil {
+				return result.Error
+			}
+			if result.RowsAffected == 0 {
+				liked = false
+				return nil
+			}
+			liked = false
+			return changeFavoriteCount(favorite.Vid, -1)
 		}
-		counts := int64(video.FavoriteCount)
-		if err := cache.Rdb.IncrBy(cache.Ctx, redisCountKey, counts).Err(); err != nil {
+		if !errors.Is(err, gorm.ErrRecordNotFound) {
 			return err
 		}
+
+		createResult := tx.Create(&model.Favorite{
+			UserID:  favorite.Uid,
+			VideoID: favorite.Vid,
+		})
+		if createResult.Error != nil {
+			if isDuplicateFavoriteError(createResult.Error) {
+				liked = true
+				return nil
+			}
+			return createResult.Error
+		}
+
+		liked = true
+		return changeFavoriteCount(favorite.Vid, 1)
+	})
+	if err != nil {
+		return false, &serializer.Response{Status: 500, Msg: "点赞操作失败"}
 	}
-	return nil
+
+	return liked, nil
+}
+
+func changeFavoriteCount(vid string, delta int64) error {
+	countKey := buildFavoriteCountKey(vid)
+	pipe := cache.Rdb.Pipeline()
+	pipe.IncrBy(cache.Ctx, countKey, delta)
+	pipe.Expire(cache.Ctx, countKey, favoriteCountTTL)
+	_, err := pipe.Exec(cache.Ctx)
+	return err
+}
+
+func isDuplicateFavoriteError(err error) bool {
+	var mysqlErr *mysqlDriver.MySQLError
+	return errors.As(err, &mysqlErr) && mysqlErr.Number == 1062
 }

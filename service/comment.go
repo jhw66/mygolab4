@@ -1,7 +1,9 @@
 package service
 
 import (
-	"strconv"
+	"encoding/json"
+	"fmt"
+	"time"
 
 	"github.com/jhw66/myvideo_lab4/cache"
 	"github.com/jhw66/myvideo_lab4/model"
@@ -9,140 +11,157 @@ import (
 )
 
 type Comment struct {
-	Uid     uint   `form:"uid" json:"uid"`
-	Vid     uint   `form:"vid" json:"vid"`
+	Uid     string `form:"uid" json:"uid"`
+	Vid     string `form:"vid" json:"vid"`
 	Content string `form:"content" json:"content" binding:"required,max=50"`
-	Cid     uint   `form:"cid" json:"cid"`
+	Cid     string `form:"cid" json:"cid"`
 }
 
 type CommentList struct {
-	Uid      uint `form:"uid" json:"uid"`
-	Vid      uint `form:"vid" json:"vid"`
-	Page     int  `form:"page"`
-	PageSize int  `form:"page_size"`
+	Uid      string `form:"uid" json:"uid"`
+	Vid      string `form:"vid" json:"vid"`
+	Page     int    `form:"page"`
+	PageSize int    `form:"page_size"`
+}
+
+const commentListCacheTTL = 30 * time.Second
+
+type commentListCache struct {
+	Comments []model.Comment `json:"comments"`
+	Total    int64           `json:"total"`
+}
+
+func buildCommentCountKey(vid string) string {
+	return "comment_count:video:" + vid
+}
+
+func buildCommentListCacheKey(vid string, page, pageSize int) string {
+	return fmt.Sprintf("comment_list:video:%s:p%d:s%d", vid, page, pageSize)
 }
 
 func (com Comment) AddComment() (*model.Comment, *serializer.Response) {
-	redisKey := "comment_count:video:" + strconv.Itoa(int(com.Vid))
-
 	comment := &model.Comment{
 		UserID:  com.Uid,
 		VideoID: com.Vid,
 		Content: com.Content,
 	}
 
-	if err := com.CacheWarmUp(redisKey); err != nil {
-		return nil, &serializer.Response{
-			Status: 500,
-			Msg:    "缓存预热失败",
-		}
+	if err := model.Db.Create(comment).Error; err != nil {
+		return nil, &serializer.Response{Status: 500, Msg: "评论保存失败"}
 	}
+	model.Db.Preload("User").Take(comment)
 
-	if err := cache.Rdb.Incr(cache.Ctx, redisKey).Err(); err != nil {
-		return nil, &serializer.Response{
-			Status: 500,
-			Msg:    "评论保存失败(redis)",
-		}
-	}
+	redisKey := buildCommentCountKey(com.Vid)
+	warmUpCommentCount(com.Vid, redisKey)
+	cache.Rdb.Incr(cache.Ctx, redisKey)
 
-	if err := model.Db.Create(&comment).Error; err != nil {
-		return nil, &serializer.Response{
-			Status: 500,
-			Msg:    "评论保存失败(mysql)",
-		}
-	}
+	UpdateRankScore(com.Vid)
+	invalidateCommentListCache(com.Vid)
+
 	return comment, nil
 }
 
 func (com *CommentList) CommentList() (*[]model.Comment, int64, *serializer.Response) {
-	var commentList []model.Comment
-	var video model.Video
-
 	page := com.Page
-	PageSize := com.PageSize
+	pageSize := com.PageSize
 	if page <= 0 {
 		page = 1
 		com.Page = 1
 	}
-	if PageSize <= 0 {
-		PageSize = 10
+	if pageSize <= 0 {
+		pageSize = 10
 		com.PageSize = 10
 	}
-	offset := (page - 1) * PageSize
 
+	cacheKey := buildCommentListCacheKey(com.Vid, page, pageSize)
+	if cached, err := cache.Rdb.Get(cache.Ctx, cacheKey).Result(); err == nil {
+		var data commentListCache
+		if err := json.Unmarshal([]byte(cached), &data); err == nil {
+			return &data.Comments, data.Total, nil
+		}
+	}
+
+	offset := (page - 1) * pageSize
+	var commentList []model.Comment
 	if err := model.Db.Preload("User").Where("video_id = ?", com.Vid).
-		Order("created_at desc").Limit(PageSize).Offset(offset).
+		Order("created_at desc").Limit(pageSize).Offset(offset).
 		Find(&commentList).Error; err != nil {
-		return nil, 0, &serializer.Response{
-			Status: 500,
-			Msg:    "查询评论失败",
-		}
+		return nil, 0, &serializer.Response{Status: 500, Msg: "查询评论失败"}
 	}
 
-	if err := model.Db.Model(&model.Video{}).Where("id = ?", com.Vid).
-		Find(&video).Error; err != nil {
-		return nil, 0, &serializer.Response{
-			Status: 500,
-			Msg:    "查询评论失败",
-		}
+	total := getCommentCount(com.Vid)
+
+	cacheData := commentListCache{Comments: commentList, Total: total}
+	if data, err := json.Marshal(cacheData); err == nil {
+		cache.Rdb.Set(cache.Ctx, cacheKey, data, commentListCacheTTL)
 	}
 
-	return &commentList, int64(video.CommentCount), nil
+	return &commentList, total, nil
 }
 
 func (com Comment) DelComment() (*model.Comment, *serializer.Response) {
 	var comment model.Comment
-
-	if err := model.Db.Model(&comment).Where("id = ?", com.Cid).Take(&comment).Error; err != nil {
-		return nil, &serializer.Response{
-			Status: 404,
-			Msg:    "该评论不存在",
-		}
+	if err := model.Db.Where("id = ?", com.Cid).Take(&comment).Error; err != nil {
+		return nil, &serializer.Response{Status: 404, Msg: "该评论不存在"}
 	}
-
-	redisKey := "comment_count:video:" + strconv.Itoa(int(comment.VideoID))
-	if err := com.CacheWarmUp(redisKey); err != nil {
-		return nil, &serializer.Response{
-			Status: 500,
-			Msg:    "缓存预热失败",
-		}
-	}
-
 	if comment.UserID != com.Uid {
-		return nil, &serializer.Response{
-			Status: 403,
-			Msg:    "不能删除别人评论",
-		}
-	}
-
-	if err := cache.Rdb.Decr(cache.Ctx, redisKey).Err(); err != nil {
-		return nil, &serializer.Response{
-			Status: 500,
-			Msg:    "删除评论失败(redis)",
-		}
+		return nil, &serializer.Response{Status: 403, Msg: "不能删除别人评论"}
 	}
 
 	if err := model.Db.Delete(&comment).Error; err != nil {
-		return nil, &serializer.Response{
-			Status: 500,
-			Msg:    "删除评论失败(mysql)",
-		}
+		return nil, &serializer.Response{Status: 500, Msg: "删除评论失败"}
 	}
+
+	redisKey := buildCommentCountKey(comment.VideoID)
+	warmUpCommentCount(comment.VideoID, redisKey)
+	cache.Rdb.Decr(cache.Ctx, redisKey)
+
+	UpdateRankScore(comment.VideoID)
+	invalidateCommentListCache(comment.VideoID)
 
 	return &comment, nil
 }
 
-func (com Comment) CacheWarmUp(redisKey string) error {
-	if exists, _ := cache.Rdb.Exists(cache.Ctx, redisKey).Result(); exists == 0 {
-		var video model.Video
-		model.Db.Where("id = ?", com.Vid).Find(&video)
-		if video.FavoriteCount == 0 {
-			return nil
-		}
-		counts := int64(video.CommentCount)
-		if err := cache.Rdb.IncrBy(cache.Ctx, redisKey, counts).Err(); err != nil {
-			return err
-		}
+func warmUpCommentCount(vid string, redisKey string) {
+	if exists, _ := cache.Rdb.Exists(cache.Ctx, redisKey).Result(); exists > 0 {
+		return
 	}
-	return nil
+
+	lockKey := fmt.Sprintf("warmup_lock:comment_count:%s", vid)
+	if !cache.TryWarmupLock(lockKey, 5*time.Second) {
+		time.Sleep(100 * time.Millisecond)
+		return
+	}
+
+	if exists, _ := cache.Rdb.Exists(cache.Ctx, redisKey).Result(); exists > 0 {
+		return
+	}
+
+	var video model.Video
+	model.Db.Where("id = ?", vid).Take(&video)
+	cache.Rdb.Set(cache.Ctx, redisKey, video.CommentCount, 24*time.Hour)
+}
+
+func getCommentCount(vid string) int64 {
+	redisKey := buildCommentCountKey(vid)
+	warmUpCommentCount(vid, redisKey)
+	count, err := cache.Rdb.Get(cache.Ctx, redisKey).Int64()
+	if err != nil {
+		var video model.Video
+		model.Db.Where("id = ?", vid).Take(&video)
+		return int64(video.CommentCount)
+	}
+	return count
+}
+
+func invalidateCommentListCache(vid string) {
+	pattern := fmt.Sprintf("comment_list:video:%s:*", vid)
+	iter := cache.Rdb.Scan(cache.Ctx, 0, pattern, 100).Iterator()
+	var keys []string
+	for iter.Next(cache.Ctx) {
+		keys = append(keys, iter.Val())
+	}
+	if len(keys) > 0 {
+		cache.Rdb.Del(cache.Ctx, keys...)
+	}
 }

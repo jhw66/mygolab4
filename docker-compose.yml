@@ -19,7 +19,7 @@ services:
       - redis
       - mysql
     networks:
-      - backend
+      - app_network
     command: /bin/sh -c "/lab4/wait-for-it.sh mysql 3306 -- /lab4/wait-for-it.sh redis 6379 -- /lab4/myvideo_lab4"
 
   redis:
@@ -28,21 +28,21 @@ services:
     ports:
       - "6379:6379"
     networks:
-      - backend
+      - app_network
 
   mysql:
     image: "mysql:8.0"
     container_name: mysql
     environment:
       MYSQL_ROOT_PASSWORD: Wujiahui789
-      MYSQL_DATABASE: myvedio_lab4
+      MYSQL_DATABASE: myvideo_lab4              
     ports:
       - "3307:3306"
     volumes:
       - ./mysql-init:/docker-entrypoint-initdb.d 
     networks:
-      - backend
+      - app_network
 
 networks:
-  backend:
+  app_network:
     driver: bridge

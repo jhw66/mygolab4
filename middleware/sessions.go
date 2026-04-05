@@ -19,7 +19,7 @@ func CurrentAccount() gin.HandlerFunc {
 		session := sessions.Default(c)
 		rawID := session.Get("user_id")
 		if rawID != nil {
-			userID, ok := rawID.(uint)
+			userID, ok := rawID.(string)
 			if ok {
 				user, err := model.GetUserByID(userID)
 				if err == nil && user != nil {

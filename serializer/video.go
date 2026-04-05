@@ -3,7 +3,7 @@ package serializer
 import "github.com/jhw66/myvideo_lab4/model"
 
 type Video struct {
-	ID            uint   `json:"id"`
+	ID            string `json:"id"`
 	Title         string `json:"title"`
 	URL           string `json:"url"`
 	Info          string `json:"info"`
@@ -28,7 +28,7 @@ func BuildVideo(video *model.Video) *Video {
 
 func BuildVideoList(videos *[]model.Video) *[]Video {
 	var res []Video
-	for key, _ := range *videos {
+	for key := range *videos {
 		res = append(res, *BuildVideo(&(*videos)[key]))
 	}
 	return &res
