@@ -66,12 +66,6 @@ func FindVideoByVid(vid string) (*model.Video, *serializer.Response) {
 	return &video, nil
 }
 
-func CompareVidAndUid(uid string, vid string) bool {
-	var video model.Video
-	model.Db.Model(&video).Where("id = ?", vid).Take(&video)
-	return video.UserID == uid
-}
-
 func UploadVideo(tx *gorm.DB, video *model.Video) (*model.Video, *serializer.Response) {
 	if err := tx.Create(video).Error; err != nil {
 		return nil, &serializer.Response{

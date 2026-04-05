@@ -29,7 +29,6 @@ func NewRouter(r *gin.Engine) {
 
 		//刷新access令牌
 		v1.POST("/refresh", api.RefreshHandler)
-
 		//保护接口
 		p := v1.Group("/p")
 		// p.Use(middleware.AuthLogin())

@@ -68,9 +68,9 @@ func UploadVideo(c *gin.Context) {
 		}
 
 		videoName := fmt.Sprintf("video_%s_%d%s", user.ID, time.Now().Unix(), filepath.Ext(videoFile.Filename))
-		videoPath := filepath.Join(videoDir, videoName)
+		videoPath := strings.ReplaceAll(filepath.Join(videoDir, videoName), "\\", "/")
 		coverName := fmt.Sprintf("cover_%s_%d%s", user.ID, time.Now().Unix(), filepath.Ext(coverFile.Filename))
-		coverPath := filepath.Join(coverDir, coverName)
+		coverPath := strings.ReplaceAll(filepath.Join(coverDir, coverName), "\\", "/")
 		c.SaveUploadedFile(videoFile, videoPath)
 		c.SaveUploadedFile(coverFile, coverPath)
 
@@ -121,7 +121,13 @@ func UpdateVideo(c *gin.Context) {
 			return errors.New("请传入视频id")
 		}
 
-		if !service.CompareVidAndUid(user.ID, vid) {
+		video, res := service.FindVideoByVid(vid)
+		if res != nil {
+			c.JSON(res.Status, res)
+			return errors.New(res.Msg)
+		}
+
+		if video.UserID != user.ID {
 			c.JSON(403, serializer.Response{
 				Status: 403,
 				Msg:    "没有修改视频权限或者不存在该视频",
@@ -129,41 +135,30 @@ func UpdateVideo(c *gin.Context) {
 			return errors.New("没有修改视频权限或者不存在该视频")
 		}
 
-		video, res := service.FindVideoByVid(vid)
-		if res != nil {
-			c.JSON(res.Status, res)
-			return errors.New(res.Msg)
+		//处理标题
+		if title := c.PostForm("title"); title != "" {
+			video.Title = title
 		}
 
-		title := c.PostForm("title")
-		info := c.PostForm("info")
-		if title == "" {
-			c.JSON(400, serializer.Response{
-				Status: 400,
-				Msg:    "标题不能为空",
-			})
-			return errors.New("标题不能为空")
+		//处理简介
+		if info, exists := c.GetPostForm("info"); exists {
+			video.Info = info
 		}
-		video.Title = title
-		video.Info = info
 
+		//处理视频文件
 		if videoFile, err := c.FormFile("video"); err == nil {
 			videoDir := "static/video"
-			if err := os.MkdirAll(videoDir, os.ModePerm); err != nil {
-				c.JSON(500, serializer.Response{
-					Status: 500,
-					Msg:    "创建视频目录失败",
-				})
-				return err
-			}
+
 			if video.URL != "" {
 				oldPath := strings.TrimPrefix(video.URL, "/")
 				if _, err := os.Stat(oldPath); err == nil {
 					os.Remove(oldPath)
 				}
 			}
+
 			videoName := fmt.Sprintf("video_%s_%d%s", user.ID, time.Now().Unix(), filepath.Ext(videoFile.Filename))
-			videoPath := filepath.Join(videoDir, videoName)
+			videoPath := strings.ReplaceAll(filepath.Join(videoDir, videoName), "\\", "/")
+
 			if err := c.SaveUploadedFile(videoFile, videoPath); err != nil {
 				c.JSON(500, serializer.Response{
 					Status: 500,
@@ -171,26 +166,24 @@ func UpdateVideo(c *gin.Context) {
 				})
 				return err
 			}
+
 			video.URL = "/" + videoPath
 		}
 
+		//处理封面文件
 		if coverFile, err := c.FormFile("cover"); err == nil {
 			coverDir := "static/cover"
-			if err := os.MkdirAll(coverDir, os.ModePerm); err != nil {
-				c.JSON(500, serializer.Response{
-					Status: 500,
-					Msg:    "创建封面目录失败",
-				})
-				return err
-			}
+
 			if video.Cover != "" {
 				oldPath := strings.TrimPrefix(video.Cover, "/")
 				if _, err := os.Stat(oldPath); err == nil {
 					os.Remove(oldPath)
 				}
 			}
+
 			coverName := fmt.Sprintf("cover_%s_%d%s", user.ID, time.Now().Unix(), filepath.Ext(coverFile.Filename))
-			coverPath := filepath.Join(coverDir, coverName)
+			coverPath := strings.ReplaceAll(filepath.Join(coverDir, coverName), "\\", "/")
+
 			if err := c.SaveUploadedFile(coverFile, coverPath); err != nil {
 				c.JSON(500, serializer.Response{
 					Status: 500,
@@ -198,6 +191,7 @@ func UpdateVideo(c *gin.Context) {
 				})
 				return err
 			}
+
 			video.Cover = "/" + coverPath
 		}
 
@@ -225,8 +219,14 @@ func DeleteVideo(c *gin.Context) {
 			return errors.New("请传入视频id")
 		}
 
-		if !service.CompareVidAndUid(user.ID, vid) {
-			c.JSON(404, serializer.Response{
+		video, res := service.FindVideoByVid(vid)
+		if res != nil {
+			c.JSON(res.Status, res)
+			return errors.New(res.Msg)
+		}
+
+		if video.UserID != user.ID {
+			c.JSON(403, serializer.Response{
 				Status: 403,
 				Msg:    "没有修改视频权限或者不存在该视频",
 			})

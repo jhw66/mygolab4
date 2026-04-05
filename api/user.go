@@ -185,16 +185,16 @@ func UserMe(c *gin.Context) {
 }
 
 func UserAvatar(c *gin.Context) {
-	userValue, exists := c.Get("user")
-	if !exists {
+	userValue, _ := c.Get("user")
+	user, ok := userValue.(*model.User)
+	if !ok {
 		c.JSON(401, serializer.Response{
 			Status: 401,
-			Msg:    "未登录",
+			Msg:    "用户未登录",
 		})
 		return
 	}
 
-	user, _ := userValue.(*model.User)
 	file, err := c.FormFile("avatar")
 	if err != nil {
 		c.JSON(400, serializer.Response{
@@ -215,14 +215,6 @@ func UserAvatar(c *gin.Context) {
 		return
 	}
 
-	//删除旧头像
-	if user.Avatar != "" {
-		oldpath := strings.TrimPrefix(user.Avatar, "/")
-		if _, err := os.Stat(oldpath); err == nil {
-			os.Remove(oldpath)
-		}
-	}
-
 	savepath := filepath.Join(dir, filename)
 	if err := c.SaveUploadedFile(file, savepath); err != nil {
 		c.JSON(500, serializer.Response{
@@ -232,9 +224,12 @@ func UserAvatar(c *gin.Context) {
 		return
 	}
 
+	oldAvatar := user.Avatar
 	user.Avatar = "/" + strings.ReplaceAll(savepath, "\\", "/")
-	if _, res := service.UploadAvatar(user); res != nil {
+	if _, res := service.UploadAvatar(user, oldAvatar); res != nil {
+		os.Remove(savepath)
 		c.JSON(res.Status, res)
+		return
 	}
 	c.JSON(200, serializer.BuildUserResponse(user))
 }
