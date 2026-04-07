@@ -58,7 +58,7 @@ func NewRouter(r *gin.Engine) {
 			//评论操作
 			p.POST("/comment/:vid", api.Comment)
 			//删除评论
-			p.DELETE("/comment/:cid", api.DelComment)
+			p.DELETE("/comment/:vid/:cid", api.DelComment)
 
 			//关注操作
 			p.POST("/relation/:uid", api.RelationAction)

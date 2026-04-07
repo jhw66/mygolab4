@@ -8,34 +8,30 @@ import (
 )
 
 func Comment(c *gin.Context) {
+	// 绑定评论参数
 	var comment service.Comment
 	if err := c.ShouldBind(&comment); err != nil {
 		c.JSON(400, serializer.Response{
 			Status: 400,
-			Msg:    "评论不能为空",
+			Msg:    "评论为空或者超过50个字符",
 		})
 		return
 	}
 	userValue, _ := c.Get("user")
 	user := userValue.(*model.User)
-
 	vid := c.Param("vid")
 	_, err := service.FindVideoByVid(vid)
 	if err != nil {
 		c.JSON(err.Status, err)
 		return
 	}
-
 	comment.Uid = user.ID
 	comment.Vid = vid
 
-	com, err := comment.AddComment()
-	if err != nil {
-		c.JSON(err.Status, err)
-		return
-	}
+	// 添加评论
+	res := comment.AddComment()
 
-	c.JSON(200, serializer.BuildComment(com))
+	c.JSON(res.Status, res)
 }
 
 func CommentList(c *gin.Context) {
@@ -74,16 +70,8 @@ func DelComment(c *gin.Context) {
 
 	comment.Uid = user.ID
 	comment.Cid = c.Param("cid")
+	comment.Vid = c.Param("vid")
 
-	_, err := comment.DelComment()
-	if err != nil {
-		c.JSON(err.Status, err)
-		return
-	}
-
-	c.JSON(200, serializer.Response{
-		Status: 200,
-		Msg:    "删除评论成功",
-	})
-
+	res := comment.DelComment()
+	c.JSON(res.Status, res)
 }

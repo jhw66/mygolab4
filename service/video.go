@@ -40,8 +40,22 @@ func DeleteVideo(tx *gorm.DB, vid string) (*model.Video, *serializer.Response) {
 			Msg:    "删除视频失败",
 		}
 	}
-	cache.Rdb.ZRem(cache.Ctx, RankZSetKey, vid)
+	//删除redis缓存
+	deleteVideoFromCache(vid)
 	return &video, nil
+}
+
+func deleteVideoFromCache(vid string) {
+	// 清理排行榜 ZSet 中该视频的记录(rankZSetKey= "rank:video:hot")
+	cache.Rdb.ZRem(cache.Ctx, rankZSetKey, vid)
+	// 清理 dirty 集合，防止 SyncDirtyToMySQL 尝试同步已删除的视频(rankDirtyVideoKey= "rank:dirty_videos")
+	cache.Rdb.SRem(cache.Ctx, rankDirtyVideoKey, vid)
+	// 清理点赞数缓存(buildFavoriteCountKey= "favorite_count:video:" + vid)
+	cache.Rdb.Del(cache.Ctx, buildFavoriteCountKey(vid))
+	// 清理评论数缓存(buildCommentCountKey= "comment_count:video:" + vid)
+	cache.Rdb.Del(cache.Ctx, buildCommentCountKey(vid))
+	// 清理所有分页评论列表缓存(invalidateCommentListCache= "comment_list:video:" + vid + ":p" + strconv.Itoa(page) + ":s" + strconv.Itoa(pageSize))
+	invalidateCommentListCache(vid)
 }
 
 func FindVideoByUser(user *model.User) (*[]model.Video, *serializer.Response) {
@@ -73,7 +87,7 @@ func UploadVideo(tx *gorm.DB, video *model.Video) (*model.Video, *serializer.Res
 			Msg:    "上传视频失败",
 		}
 	}
-	cache.Rdb.ZAdd(cache.Ctx, RankZSetKey, redis.Z{
+	cache.Rdb.ZAdd(cache.Ctx, rankZSetKey, redis.Z{
 		Score:  float64(video.HotScore),
 		Member: video.ID,
 	})
@@ -81,14 +95,14 @@ func UploadVideo(tx *gorm.DB, video *model.Video) (*model.Video, *serializer.Res
 }
 
 func UpdateVideo(tx *gorm.DB, video *model.Video) (*model.Video, *serializer.Response) {
-	video.HotScore = CalculateHotScore(video.FavoriteCount, video.CommentCount)
+	video.HotScore = uint64(CalculateHotScore(video.FavoriteCount, video.CommentCount))
 	if err := tx.Save(video).Error; err != nil {
 		return nil, &serializer.Response{
 			Status: 500,
 			Msg:    "更新视频失败",
 		}
 	}
-	cache.Rdb.ZAdd(cache.Ctx, RankZSetKey, redis.Z{
+	cache.Rdb.ZAdd(cache.Ctx, rankZSetKey, redis.Z{
 		Score:  float64(video.HotScore),
 		Member: video.ID,
 	})

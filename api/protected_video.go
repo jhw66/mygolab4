@@ -82,7 +82,7 @@ func UploadVideo(c *gin.Context) {
 			Cover:         "/" + coverPath,
 			FavoriteCount: 0,
 			CommentCount:  0,
-			HotScore:      service.CalculateHotScore(0, 0),
+			HotScore:      uint64(service.CalculateHotScore(0, 0)),
 		}
 
 		if _, err := service.UploadVideo(tx, &video); err != nil {
