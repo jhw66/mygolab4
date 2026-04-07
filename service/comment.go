@@ -82,19 +82,16 @@ func (com Comment) AddComment() *serializer.Response {
 
 // 删除评论
 func (com Comment) DelComment() *serializer.Response {
-	// 预热缓存移到事务外，避免事务回滚后 Redis 不一致
-	if err := warmUpCommentCount(com.Vid); err != nil {
-		return &serializer.Response{Status: 500, Msg: "预热评论数缓存失败"}
-	}
-
 	err := model.Db.Transaction(func(tx *gorm.DB) error {
 		var comment model.Comment
-		if err := tx.Where("id = ?", com.Cid).Take(&comment).Error; err != nil {
+		if err := tx.Where("id = ? AND video_id = ?", com.Cid, com.Vid).Take(&comment).Error; err != nil {
 			return errors.New("该评论不存在")
 		}
+
 		if comment.UserID != com.Uid {
 			return errors.New("不能删除别人评论")
 		}
+
 		if err := tx.Delete(&comment).Error; err != nil {
 			return errors.New("删除评论失败")
 		}
@@ -104,6 +101,12 @@ func (com Comment) DelComment() *serializer.Response {
 
 	if err != nil {
 		return &serializer.Response{Status: 500, Msg: err.Error()}
+	}
+
+	//由于在api层没有判断视频是否存在，将这个放在事务上面会导致即使视频不存在，也会预热评论数缓存
+	// 预热缓存移到事务外，避免事务回滚后 Redis 不一致
+	if err := warmUpCommentCount(com.Vid); err != nil {
+		return &serializer.Response{Status: 500, Msg: "预热评论数缓存失败"}
 	}
 
 	// 更新评论数缓存和排行榜

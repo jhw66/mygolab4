@@ -11,7 +11,7 @@ import (
 
 const (
 	favoriteWeight uint = 100
-	commentWeight  uint = 1
+	commentWeight  uint = 20
 
 	DefaultRankLimit    = 10
 	rankZSetKey         = "rank:video:hot"
@@ -78,7 +78,8 @@ func GetRankVideos(limit int) (*[]model.Video, error) {
 		return nil, err
 	}
 
-	//可能mysql中的点赞/评论数与redis中的不一致，但是主要是从mysql中获取url等信息，不影响排名
+	//可能mysql中的点赞/评论数与redis中的不一致，因为redis中的数据是异步更新的
+	//但是主要是从mysql中获取url等信息，不影响排名
 	var videos []model.Video
 	if err := model.Db.Where("id IN ?", vids).Find(&videos).Error; err != nil {
 		return nil, err

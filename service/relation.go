@@ -41,7 +41,7 @@ func (Relation) RelationAction(tid string, uid string) *serializer.Response {
 
 func (Relation) FollowingList(uid string) *serializer.Response {
 	var users []model.User
-	if err := model.Db.Table("user").Joins("join relation on relation.target_user_id = user.id").Where("relation.user_id = ?", uid).
+	if err := model.Db.Table("user").Joins("join relation on relation.target_user_id = user.id").Where("relation.user_id = ? AND relation.deleted_at is null", uid).
 		Find(&users).Error; err != nil {
 		return &serializer.Response{
 			Status: 500,
