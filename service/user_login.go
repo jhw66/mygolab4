@@ -29,3 +29,9 @@ func (userlogin UserLogin) Login() (*model.User, *serializer.Response) {
 
 	return &user, nil
 }
+
+func GetUserByID(id string) (*model.User, error) {
+	var user model.User
+	err := model.Db.Where("id = ?", id).Take(&user).Error
+	return &user, err
+}
