@@ -14,7 +14,7 @@ func RelationAction(c *gin.Context) {
 	userValue, _ := c.Get("user")
 	user := userValue.(*model.User)
 
-	_, err := model.GetUserByID(targetID)
+	_, err := service.GetUserByID(targetID)
 	if err != nil {
 		c.JSON(404, serializer.Response{
 			Status: 404,

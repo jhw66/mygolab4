@@ -2,8 +2,8 @@ package middleware
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/jhw66/myvideo_lab4/model"
 	"github.com/jhw66/myvideo_lab4/serializer"
+	"github.com/jhw66/myvideo_lab4/service"
 	"github.com/jhw66/myvideo_lab4/utils"
 )
 
@@ -51,7 +51,7 @@ func AccessAuthProtect() gin.HandlerFunc {
 			return
 		}
 
-		user, err := model.GetUserByID(claims.UserID)
+		user, err := service.GetUserByID(claims.UserID)
 		if err != nil || user == nil {
 			c.JSON(401, serializer.Response{
 				Status: 401,

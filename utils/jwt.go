@@ -7,7 +7,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-var Secret = []byte("my_secret")
+var jwtsecret = []byte("my_secret")
 
 type MyClaim struct {
 	UserID    string `json:"user_id"`
@@ -26,7 +26,7 @@ func GenerateAccessToken(userID string) (string, error) {
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 
-	return token.SignedString(Secret)
+	return token.SignedString(jwtsecret)
 }
 
 func GenerateRefreshToken(userID string) (string, error) {
@@ -40,12 +40,12 @@ func GenerateRefreshToken(userID string) (string, error) {
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 
-	return token.SignedString(Secret)
+	return token.SignedString(jwtsecret)
 }
 
 func ParseToken(tokenString string) (*MyClaim, error) {
 	token, err := jwt.ParseWithClaims(tokenString, &MyClaim{}, func(t *jwt.Token) (any, error) {
-		return Secret, nil
+		return jwtsecret, nil
 	})
 	if err != nil {
 		return nil, err

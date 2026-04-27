@@ -6,6 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jhw66/myvideo_lab4/model"
 	"github.com/jhw66/myvideo_lab4/serializer"
+	"github.com/jhw66/myvideo_lab4/service"
 )
 
 func Session(secret string) gin.HandlerFunc {
@@ -21,7 +22,7 @@ func CurrentAccount() gin.HandlerFunc {
 		if rawID != nil {
 			userID, ok := rawID.(string)
 			if ok {
-				user, err := model.GetUserByID(userID)
+				user, err := service.GetUserByID(userID)
 				if err == nil && user != nil {
 					c.Set("user", user)
 				}
