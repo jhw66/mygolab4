@@ -1,0 +1,23 @@
+Name: user-api
+Host: 0.0.0.0
+Port: 8888
+Timeout: 5000
+
+Jwt:
+  AccessSecret: "your-256-bit-secret"
+  AccessExpire: 86400
+  RefreshSecret: "another-random-secret"
+  RefreshExpire: 604800
+
+Mysql:
+   Dsn: "wjhaccount:Wujiahui789@tcp(127.0.0.1:3306)/gozero?parseTime=true&loc=UTC"
+   MaxOpenConns: 20
+   MaxIdleConns: 10
+   ConnMaxLifetime: 3600
+
+Redis:
+   Addr: "127.0.0.1:6379"
+   Password: ""
+   DB: 7
+   PoolSize: 20
+   MinIdleConns: 5

@@ -1,6 +1,6 @@
 已完成用户，视频，互动，社交模块
 
-ID部分采用雪花ID
+ID部分采用雪花ID，并且利用hook保证生成id的时候用到雪花id
 
 注册登录采用的是双token，用cookie存储
 
@@ -20,7 +20,8 @@ ID部分采用雪花ID
 
 点赞和评论缓存预热采用 cache.TryWarmupLock(lockKey, 5*time.Second) 分布式锁+双重检查，防止并发预热导致重复 DB 查询
 
-
 社交部分就是普通的curd
 
 完成Docker部署，并且传到了docker hub上，就是pull下来总是启动失败(研究ing)
+
+改用go-zero架构，优化了调用mysql，redis等工具逻辑

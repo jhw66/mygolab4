@@ -1,0 +1,230 @@
+syntax = "v1"
+
+info (
+	title:   "MyVideo API"
+	desc:    "视频应用接口"
+	author:  "jhw66"
+	version: "1.0"
+)
+
+// ==================== 请求类型 ====================
+type (
+	CommonRsp {
+		Status int    `json:"status"`
+		Msg    string `json:"msg,optional"`
+		Error  string `json:"error,optional"`
+	}
+	UserItem {
+		Id        string `json:"id"`
+		Username  string `json:"username"`
+		Nickname  string `json:"nickname"`
+		CreatedAt int64  `json:"created_at"`
+		Avatar    string `json:"avatar"`
+	}
+	VideoItem {
+		Id            string `json:"id"`
+		Title         string `json:"title"`
+		Url           string `json:"url"`
+		Info          string `json:"info"`
+		Cover         string `json:"cover"`
+		CommentCount  uint   `json:"comment_count"`
+		FavoriteCount uint   `json:"favorite_count"`
+		CreatedAt     int64  `json:"created_at"`
+	}
+	CommentItem {
+		Id        string   `json:"id"`
+		UserId    string   `json:"user_id"`
+		VideoId   string   `json:"video_id"`
+		Content   string   `json:"content"`
+		CreatedAt int64    `json:"created_at"`
+		User      UserItem `json:"user"`
+	}
+	CommentListData {
+		Total    int64         `json:"total"`
+		Page     int           `json:"page"`
+		PageSize int           `json:"page_size"`
+		Comments []CommentItem `json:"comments"`
+	}
+	UserRsp {
+		Status int      `json:"status"`
+		Data   UserItem `json:"data"`
+		Msg    string   `json:"msg,optional"`
+		Error  string   `json:"error,optional"`
+	}
+	UserListRsp {
+		Status int        `json:"status"`
+		Data   []UserItem `json:"data"`
+		Msg    string     `json:"msg,optional"`
+		Error  string     `json:"error,optional"`
+	}
+	VideoRsp {
+		Status int       `json:"status"`
+		Data   VideoItem `json:"data"`
+		Msg    string    `json:"msg,optional"`
+		Error  string    `json:"error,optional"`
+	}
+	VideoListRsp {
+		Status int         `json:"status"`
+		Data   []VideoItem `json:"data"`
+		Msg    string      `json:"msg,optional"`
+		Error  string      `json:"error,optional"`
+	}
+	CommentListRsp {
+		Status int             `json:"status"`
+		Data   CommentListData `json:"data"`
+		Msg    string          `json:"msg,optional"`
+		Error  string          `json:"error,optional"`
+	}
+	UserRegisterReq {
+		NickName        string `json:"nick_name,range=[2:30]"`
+		UserName        string `json:"user_name,range=[5:30]"`
+		Password        string `json:"password,range=[8:40]"`
+		PasswordConfirm string `json:"password_confirm,range=[8:40]"`
+	}
+	UserLoginReq {
+		UserName string `json:"user_name,range=[5:30]"`
+		Password string `json:"password,range=[8:40]"`
+	}
+	VideoSearchReq {
+		KeyWord string `form:"key_word,range=[1:10]"`
+	}
+	VideoIdReq {
+		Id string `path:"id"`
+	}
+	FavoriteReq {
+		Vid string `path:"vid"`
+	}
+	CommentAddReq {
+		Vid     string `path:"vid"`
+		Content string `json:"content,range=[1:50]"`
+	}
+	CommentListReq {
+		Vid      string `path:"vid"`
+		Page     int    `form:"page,optional"`
+		PageSize int    `form:"page_size,optional"`
+	}
+	DelCommentReq {
+		Vid string `path:"vid"`
+		Cid string `path:"cid"`
+	}
+	RelationReq {
+		Uid string `path:"uid"`
+	}
+)
+
+// ==================== 公开路由 ====================
+@server (
+	prefix: /api/v1
+	group:  common
+)
+service myvideo-api {
+	@handler UserRegister
+	post /user/register (UserRegisterReq) returns (UserRsp)
+
+	@handler UserLogin
+	post /user/login (UserLoginReq) returns (UserRsp)
+
+	@handler VideoSearch
+	get /videos/search (VideoSearchReq) returns (VideoListRsp)
+
+	@handler RankVideos
+	get /video/rank returns (VideoListRsp)
+
+	@handler VideoDetail
+	get /video/:id (VideoIdReq) returns (VideoRsp)
+
+	@handler CommentList
+	get /comment/:vid (CommentListReq) returns (CommentListRsp)
+
+	@handler RefreshHandler
+	post /refresh returns (CommonRsp)
+}
+
+// ==================== 保护路由（JWT 认证） ====================
+@server (
+	prefix:     /api/v1/p/user
+	group:      user
+	middleware: AccessAuth
+)
+service myvideo-api {
+	@handler UserMe
+	get /me returns (UserRsp)
+
+	@handler UserLogout
+	post /logout returns (CommonRsp)
+
+	@handler UserAvatar
+	post /avatar returns (UserRsp)
+}
+
+@server (
+	prefix:     /api/v1/p/video
+	group:      video
+	middleware: AccessAuth
+)
+service myvideo-api {
+	@handler UploadVideo
+	post / returns (VideoRsp)
+
+	@handler MyVideo
+	get /me returns (VideoListRsp)
+
+	@handler UpdateVideo
+	put /:id (VideoIdReq) returns (VideoRsp)
+
+	@handler DeleteVideo
+	delete /:id (VideoIdReq) returns (CommonRsp)
+}
+
+@server (
+	prefix:     /api/v1/p/favorite
+	group:      favorite
+	middleware: AccessAuth
+)
+service myvideo-api {
+	@handler Favorite
+	post /:vid (FavoriteReq) returns (CommonRsp)
+}
+
+@server (
+	prefix:     /api/v1/p
+	group:      favorite
+	middleware: AccessAuth
+)
+service myvideo-api {
+	@handler FavoriteList
+	get /favoriteList/me returns (VideoListRsp)
+}
+
+@server (
+	prefix:     /api/v1/p/comment
+	group:      comment
+	middleware: AccessAuth
+)
+service myvideo-api {
+	@handler Comment
+	post /:vid (CommentAddReq) returns (CommonRsp)
+
+	@handler DelComment
+	delete /:vid/:cid (DelCommentReq) returns (CommonRsp)
+}
+
+@server (
+	prefix:     /api/v1/p/relation
+	group:      relation
+	middleware: AccessAuth
+)
+service myvideo-api {
+	@handler RelationAction
+	post /:uid (RelationReq) returns (CommonRsp)
+
+	@handler FollowingList
+	get /following returns (UserListRsp)
+
+	@handler FollowerList
+	get /follower returns (UserListRsp)
+
+	@handler FriendList
+	get /friend returns (UserListRsp)
+}
+
