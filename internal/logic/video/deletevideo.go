@@ -9,8 +9,8 @@ import (
 
 	"github.com/jhw66/myvideo_lab4/internal/svc"
 	"github.com/jhw66/myvideo_lab4/internal/types"
-	"github.com/jhw66/myvideo_lab4/pkg/utlcontext"
 	"github.com/jhw66/myvideo_lab4/pkg/utils"
+	"github.com/jhw66/myvideo_lab4/pkg/utlcontext"
 
 	"github.com/zeromicro/go-zero/core/logx"
 	"gorm.io/gorm"
@@ -52,10 +52,10 @@ func (l *DeleteVideoLogic) DeleteVideo(req *types.VideoIdReq) (resp *types.Commo
 		if err != nil {
 			return err
 		}
-		if err := utils.RemoveIfExists(deleted.URL); err != nil {
+		if err := utils.RemoveIfExistsWithUrl(deleted.URL); err != nil {
 			return err
 		}
-		if err := utils.RemoveIfExists(deleted.Cover); err != nil {
+		if err := utils.RemoveIfExistsWithUrl(deleted.Cover); err != nil {
 			return err
 		}
 		return nil

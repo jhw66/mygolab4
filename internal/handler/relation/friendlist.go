@@ -16,9 +16,9 @@ func FriendListHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 		l := relation.NewFriendListLogic(r.Context(), svcCtx)
 		resp, err := l.FriendList()
 		if err != nil {
-			httpx.ErrorCtx(r.Context(), w, err)
-		} else {
-			httpx.OkJsonCtx(r.Context(), w, resp)
+			httpx.WriteJsonCtx(r.Context(), w, 200, resp)
+			return
 		}
+		httpx.WriteJsonCtx(r.Context(), w, 200, resp)
 	}
 }
