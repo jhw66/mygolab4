@@ -48,14 +48,30 @@ func (l *DeleteVideoLogic) DeleteVideo(req *types.VideoIdReq) (resp *types.Commo
 	}
 
 	err = l.svcCtx.TransactionRepository.WithTransaction(l.ctx, func(tx *gorm.DB) error {
+		// 删除视频的点赞
+		if err := l.svcCtx.FavoriteRepo.DeleteByVideoIDWithTx(l.ctx, tx, req.Id); err != nil {
+			l.Errorf("delete favorite by video failed, vid=%s, err=%v", req.Id, err)
+			return err
+		}
+		// 删除视频的评论
+		if err := l.svcCtx.CommentRepo.DeleteByVideoIDWithTx(l.ctx, tx, req.Id); err != nil {
+			l.Errorf("delete comment by video failed, vid=%s, err=%v", req.Id, err)
+			return err
+		}
+		// 删除视频
 		deleted, err := l.svcCtx.VideoRepo.DeleteByIDWithTx(l.ctx, tx, req.Id)
 		if err != nil {
+			l.Errorf("delete video failed, vid=%s, err=%v", req.Id, err)
 			return err
 		}
+		// 删除视频文件
 		if err := utils.RemoveIfExistsWithUrl(deleted.URL); err != nil {
+			l.Errorf("remove video file failed, url=%s, err=%v", deleted.URL, err)
 			return err
 		}
+		// 删除视频封面文件
 		if err := utils.RemoveIfExistsWithUrl(deleted.Cover); err != nil {
+			l.Errorf("remove video cover file failed, url=%s, err=%v", deleted.Cover, err)
 			return err
 		}
 		return nil
@@ -64,15 +80,29 @@ func (l *DeleteVideoLogic) DeleteVideo(req *types.VideoIdReq) (resp *types.Commo
 		return &types.CommonRsp{Status: 500, Msg: "视频删除失败"}, errors.New("视频删除失败")
 	}
 
-	deleteVideoCaches(l.ctx, l.svcCtx, req.Id)
+	if err := deleteVideoCaches(l, req.Id); err != nil {
+		l.Errorf("delete video caches failed, vid=%s, err=%v", req.Id, err)
+	}
 
 	return &types.CommonRsp{Status: 200, Msg: "视频删除成功"}, nil
 }
 
-func deleteVideoCaches(ctx context.Context, svcCtx *svc.ServiceContext, vid string) error {
-	_ = svcCtx.RankCache.RemoveVideo(ctx, vid)
-	_ = svcCtx.FavoriteCache.DelCount(ctx, vid)
-	_ = svcCtx.CommentCache.DelCount(ctx, vid)
-	_ = svcCtx.CommentCache.InvalidateListByVideo(ctx, vid)
+func deleteVideoCaches(l *DeleteVideoLogic, vid string) error {
+	if err := l.svcCtx.RankCache.RemoveVideo(l.ctx, vid); err != nil {
+		l.Errorf("remove video from rank cache failed, vid=%s, err=%v", vid, err)
+		return err
+	}
+	if err := l.svcCtx.FavoriteCache.DelCount(l.ctx, vid); err != nil {
+		l.Errorf("delete favorite count failed, vid=%s, err=%v", vid, err)
+		return err
+	}
+	if err := l.svcCtx.CommentCache.DelCount(l.ctx, vid); err != nil {
+		l.Errorf("delete comment count failed, vid=%s, err=%v", vid, err)
+		return err
+	}
+	if err := l.svcCtx.CommentCache.InvalidateListByVideo(l.ctx, vid); err != nil {
+		l.Errorf("invalidate comment list failed, vid=%s, err=%v", vid, err)
+		return err
+	}
 	return nil
 }

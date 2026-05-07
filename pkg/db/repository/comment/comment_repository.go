@@ -14,6 +14,7 @@ type CommentRepository interface {
 	FindByIDAndVideoWithTx(ctx context.Context, tx *gorm.DB, commentID, videoID string) (*model.Comment, error)
 	Delete(ctx context.Context, comment *model.Comment) error
 	DeleteWithTx(ctx context.Context, tx *gorm.DB, comment *model.Comment) error
+	DeleteByVideoIDWithTx(ctx context.Context, tx *gorm.DB, videoID string) error
 	ListByVideoID(ctx context.Context, videoID string, page int, pageSize int) ([]model.Comment, error)
 }
 
@@ -57,6 +58,12 @@ func (r *commentRepository) Delete(ctx context.Context, comment *model.Comment) 
 
 func (r *commentRepository) DeleteWithTx(ctx context.Context, tx *gorm.DB, comment *model.Comment) error {
 	return tx.WithContext(ctx).Delete(comment).Error
+}
+
+func (r *commentRepository) DeleteByVideoIDWithTx(ctx context.Context, tx *gorm.DB, videoID string) error {
+	return tx.WithContext(ctx).
+		Where("video_id = ?", videoID).
+		Delete(&model.Comment{}).Error
 }
 
 func (r *commentRepository) ListByVideoID(ctx context.Context, videoID string, page int, pageSize int) ([]model.Comment, error) {
