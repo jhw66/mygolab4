@@ -14,6 +14,7 @@ type FavoriteRepository interface {
 	CreateWithTx(ctx context.Context, tx *gorm.DB, favorite *model.Favorite) error
 	DeleteByUserAndVideo(ctx context.Context, userID, videoID string) error
 	DeleteByUserAndVideoWithTx(ctx context.Context, tx *gorm.DB, userID, videoID string) error
+	DeleteByVideoIDWithTx(ctx context.Context, tx *gorm.DB, videoID string) error
 	ListVideosByUserID(ctx context.Context, userID string) ([]model.Video, error)
 }
 
@@ -60,6 +61,12 @@ func (r *favoriteRepository) DeleteByUserAndVideo(ctx context.Context, userID, v
 func (r *favoriteRepository) DeleteByUserAndVideoWithTx(ctx context.Context, tx *gorm.DB, userID, videoID string) error {
 	return tx.WithContext(ctx).
 		Where("user_id = ? AND video_id = ?", userID, videoID).
+		Delete(&model.Favorite{}).Error
+}
+
+func (r *favoriteRepository) DeleteByVideoIDWithTx(ctx context.Context, tx *gorm.DB, videoID string) error {
+	return tx.WithContext(ctx).
+		Where("video_id = ?", videoID).
 		Delete(&model.Favorite{}).Error
 }
 

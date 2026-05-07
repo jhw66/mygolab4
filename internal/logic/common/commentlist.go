@@ -58,7 +58,9 @@ func (l *CommentListLogic) CommentList(req *types.CommentListReq) (resp *types.C
 		return &types.CommentListRsp{Status: 500, Msg: "查询评论失败"}, errors.New("查询评论失败")
 	}
 
-	_ = core.WarmUpCommentCount(l.ctx, l.svcCtx.CommentCache, l.svcCtx.VideoRepo, req.Vid)
+	if err := core.WarmUpCommentCount(l.ctx, l.svcCtx.CommentCache, l.svcCtx.VideoRepo, req.Vid); err != nil {
+		l.Errorf("warmup comment count failed, vid=%s, err=%v", req.Vid, err)
+	}
 
 	total, err := l.svcCtx.CommentCache.GetCount(l.ctx, req.Vid)
 	if err != nil {
