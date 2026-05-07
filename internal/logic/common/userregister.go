@@ -31,6 +31,19 @@ func NewUserRegisterLogic(ctx context.Context, svcCtx *svc.ServiceContext) *User
 }
 
 func (l *UserRegisterLogic) UserRegister(req *types.UserRegisterReq) (resp *types.UserRsp, err error) {
+	if err := utils.ValidateRuneLength(req.NickName, 2, 30, "昵称长度需在2-30个字符"); err != nil {
+		return &types.UserRsp{Status: 400, Msg: err.Error()}, err
+	}
+	if err := utils.ValidateRuneLength(req.UserName, 5, 30, "用户名长度需在5-30个字符"); err != nil {
+		return &types.UserRsp{Status: 400, Msg: err.Error()}, err
+	}
+	if err := utils.ValidateRuneLength(req.Password, 8, 40, "密码长度需在8-40个字符"); err != nil {
+		return &types.UserRsp{Status: 400, Msg: err.Error()}, err
+	}
+	if err := utils.ValidateRuneLength(req.PasswordConfirm, 8, 40, "确认密码长度需在8-40个字符"); err != nil {
+		return &types.UserRsp{Status: 400, Msg: err.Error()}, err
+	}
+
 	if req.PasswordConfirm != req.Password {
 		return &types.UserRsp{Status: 400, Msg: "两次输入密码不一致"}, errors.New("两次输入密码不一致")
 	}

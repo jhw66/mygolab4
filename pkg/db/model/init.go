@@ -32,6 +32,9 @@ func InitDB(cfg *config.Config) (*gorm.DB, error) {
 	}
 
 	sqlDB, err := db.DB()
+	if err != nil {
+		return nil, fmt.Errorf("get sql.DB failed:%w", err)
+	}
 	sqlDB.SetMaxOpenConns(cfg.Mysql.MaxOpenConns)
 	sqlDB.SetConnMaxLifetime(time.Duration(cfg.Mysql.ConnMaxLifetime))
 	sqlDB.SetMaxIdleConns(cfg.Mysql.MaxIdleConns)

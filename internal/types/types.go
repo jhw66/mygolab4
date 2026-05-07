@@ -5,7 +5,7 @@ package types
 
 type CommentAddReq struct {
 	Vid     string `path:"vid"`
-	Content string `json:"content,range=[1:50]"`
+	Content string `json:"content"`
 }
 
 type CommentItem struct {
@@ -72,15 +72,15 @@ type UserListRsp struct {
 }
 
 type UserLoginReq struct {
-	UserName string `json:"user_name,range=[5:30]"`
-	Password string `json:"password,range=[8:40]"`
+	UserName string `json:"user_name"`
+	Password string `json:"password"`
 }
 
 type UserRegisterReq struct {
-	NickName        string `json:"nick_name,range=[2:30]"`
-	UserName        string `json:"user_name,range=[5:30]"`
-	Password        string `json:"password,range=[8:40]"`
-	PasswordConfirm string `json:"password_confirm,range=[8:40]"`
+	NickName        string `json:"nick_name"`
+	UserName        string `json:"user_name"`
+	Password        string `json:"password"`
+	PasswordConfirm string `json:"password_confirm"`
 }
 
 type UserRsp struct {
@@ -120,5 +120,5 @@ type VideoRsp struct {
 }
 
 type VideoSearchReq struct {
-	KeyWord string `form:"key_word,range=[1:10]"`
+	KeyWord string `form:"key_word"`
 }

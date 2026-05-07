@@ -16,7 +16,7 @@ func UserLogoutHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 		l := user.NewUserLogoutLogic(r.Context(), svcCtx)
 		resp, err := l.UserLogout()
 		if err != nil {
-			httpx.ErrorCtx(r.Context(), w, err)
+			httpx.WriteJsonCtx(r.Context(), w, 200, resp)
 		} else {
 			http.SetCookie(w, &http.Cookie{
 				Name:     "refresh_token",
@@ -32,7 +32,7 @@ func UserLogoutHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 				Path:   "/",
 				MaxAge: -1,
 			})
-			httpx.OkJsonCtx(r.Context(), w, resp)
+			httpx.WriteJsonCtx(r.Context(), w, 200, resp)
 		}
 	}
 }

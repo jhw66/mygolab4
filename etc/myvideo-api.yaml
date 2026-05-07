@@ -1,13 +1,16 @@
 Name: user-api
 Host: 0.0.0.0
 Port: 8888
-Timeout: 5000
+# 请求体上限（字节），默认 1MiB，视频上传需调大
+MaxBytes: 524288000 
+# 单次请求处理超时（毫秒），大文件上传需足够长
+Timeout: 600000
 
 Jwt:
-  AccessSecret: "your-256-bit-secret"
-  AccessExpire: 86400
-  RefreshSecret: "another-random-secret"
-  RefreshExpire: 604800
+  AccessTokenSecret: "your-256-bit-secret"
+  AccessTokenExpire: 86400
+  RefreshTokenSecret: "another-random-secret"
+  RefreshTokenExpire: 604800
 
 Mysql:
    Dsn: "wjhaccount:Wujiahui789@tcp(127.0.0.1:3306)/gozero?parseTime=true&loc=UTC"

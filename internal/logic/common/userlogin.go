@@ -30,6 +30,13 @@ func NewUserLoginLogic(ctx context.Context, svcCtx *svc.ServiceContext) *UserLog
 }
 
 func (l *UserLoginLogic) UserLogin(req *types.UserLoginReq) (resp *types.UserRsp, err error) {
+	if err := utils.ValidateRuneLength(req.UserName, 5, 30, "用户名长度需在5-30个字符"); err != nil {
+		return &types.UserRsp{Status: 400, Msg: err.Error()}, err
+	}
+	if err := utils.ValidateRuneLength(req.Password, 8, 40, "密码长度需在8-40个字符"); err != nil {
+		return &types.UserRsp{Status: 400, Msg: err.Error()}, err
+	}
+
 	user, err := l.svcCtx.UserRepo.FindByUsername(l.ctx, req.UserName)
 	if err != nil {
 		return &types.UserRsp{Status: 404, Msg: "用户不存在，请先注册"}, errors.New("用户不存在，请先注册")

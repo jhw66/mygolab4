@@ -16,9 +16,9 @@ func FollowingListHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 		l := relation.NewFollowingListLogic(r.Context(), svcCtx)
 		resp, err := l.FollowingList()
 		if err != nil {
-			httpx.ErrorCtx(r.Context(), w, err)
-		} else {
-			httpx.OkJsonCtx(r.Context(), w, resp)
+			httpx.WriteJsonCtx(r.Context(), w, 200, resp)
+			return
 		}
+		httpx.WriteJsonCtx(r.Context(), w, 200, resp)
 	}
 }

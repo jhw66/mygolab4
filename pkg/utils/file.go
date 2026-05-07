@@ -125,6 +125,14 @@ func RemoveIfExists(diskpath string) error {
 	return nil
 }
 
+func RemoveIfExistsWithUrl(url string) error {
+	diskpath := toDiskPath(url)
+	if err := os.Remove(diskpath); err != nil {
+		return err
+	}
+	return nil
+}
+
 func strconvUnix() string {
 	return strconv.FormatInt(time.Now().Unix(), 10)
 }
