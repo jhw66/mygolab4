@@ -10,8 +10,8 @@ import (
 	"github.com/jhw66/myvideo_lab4/internal/logic/core"
 	"github.com/jhw66/myvideo_lab4/internal/svc"
 	"github.com/jhw66/myvideo_lab4/internal/types"
+	"github.com/jhw66/myvideo_lab4/pkg/auth"
 	"github.com/jhw66/myvideo_lab4/pkg/db/model"
-	"github.com/jhw66/myvideo_lab4/pkg/utlcontext"
 
 	"github.com/zeromicro/go-zero/core/logx"
 	"gorm.io/gorm"
@@ -32,7 +32,7 @@ func NewFavoriteLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Favorite
 }
 
 func (l *FavoriteLogic) Favorite(req *types.FavoriteReq) (resp *types.CommonRsp, err error) {
-	user, ok := utlcontext.GetUserFromContext(l.ctx)
+	user, ok := auth.GetUserFromContext(l.ctx)
 	if !ok || user == nil {
 		return &types.CommonRsp{Status: 401, Msg: "用户未登录"}, errors.New("用户未登录")
 	}

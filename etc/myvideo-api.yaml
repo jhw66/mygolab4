@@ -7,13 +7,21 @@ MaxBytes: 524288000
 Timeout: 600000
 
 Jwt:
-  AccessTokenSecret: "your-256-bit-secret"
-  AccessTokenExpire: 86400
-  RefreshTokenSecret: "another-random-secret"
+  AccessTokenSecret: "accessToken-secret"
+  AccessTokenExpire: 7200
+  RefreshTokenSecret: "refreshToken-secret"
   RefreshTokenExpire: 604800
+  ChallengeTokenSecret: "challengeToken-secret"
+  ChallengeTokenExpire: 300
+
+Totp:
+  Issuer: "MyVideo"
+  SecretCipherKey: "secret-cipher-key"
+  QRCodeSize: 256
+  QRCodeLevel: "M"
 
 Mysql:
-   Dsn: "wjhaccount:Wujiahui789@tcp(127.0.0.1:3306)/gozero?parseTime=true&loc=UTC"
+   Dsn: "wjhaccount:Wujiahui789@tcp(127.0.0.1:3306)/myvideo?parseTime=true&loc=UTC"
    MaxOpenConns: 20
    MaxIdleConns: 10
    ConnMaxLifetime: 3600

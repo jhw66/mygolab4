@@ -9,8 +9,8 @@ import (
 
 	"github.com/jhw66/myvideo_lab4/internal/svc"
 	"github.com/jhw66/myvideo_lab4/internal/types"
+	"github.com/jhw66/myvideo_lab4/pkg/auth"
 	"github.com/jhw66/myvideo_lab4/pkg/serializer"
-	"github.com/jhw66/myvideo_lab4/pkg/utlcontext"
 
 	"github.com/zeromicro/go-zero/core/logx"
 )
@@ -30,7 +30,7 @@ func NewMyVideoLogic(ctx context.Context, svcCtx *svc.ServiceContext) *MyVideoLo
 }
 
 func (l *MyVideoLogic) MyVideo() (resp *types.VideoListRsp, err error) {
-	user, ok := utlcontext.GetUserFromContext(l.ctx)
+	user, ok := auth.GetUserFromContext(l.ctx)
 	if !ok || user == nil {
 		return &types.VideoListRsp{Status: 401, Msg: "用户未登录"}, errors.New("用户未登录")
 	}

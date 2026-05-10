@@ -30,7 +30,7 @@ func NewVideoSearchLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Video
 }
 
 func (l *VideoSearchLogic) VideoSearch(req *types.VideoSearchReq) (resp *types.VideoListRsp, err error) {
-	if err := utils.ValidateRuneLength(req.KeyWord, 1, 10, "关键词长度需在1-10个字符"); err != nil {
+	if err := utils.ValidateRuneLength(req.KeyWord, 1, 10); err != nil {
 		return &types.VideoListRsp{Status: 400, Msg: err.Error()}, err
 	}
 

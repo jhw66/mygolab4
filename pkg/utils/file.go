@@ -120,6 +120,9 @@ func RemoveIfExists(diskpath string) error {
 		return nil
 	}
 	if err := os.Remove(diskpath); err != nil {
+		if err == os.ErrNotExist {
+			return nil
+		}
 		return err
 	}
 	return nil
