@@ -53,6 +53,10 @@ func (l *DeleteVideoLogic) DeleteVideo(req *types.VideoIdReq) (resp *types.Commo
 			l.Errorf("delete favorite by video failed, vid=%s, err=%v", req.Id, err)
 			return err
 		}
+		if err := l.svcCtx.CommentFavoriteRepo.DeleteByVideoIDWithTx(l.ctx, tx, req.Id); err != nil {
+			l.Errorf("delete comment favorite by video failed, vid=%s, err=%v", req.Id, err)
+			return err
+		}
 		// 删除视频的评论
 		if err := l.svcCtx.CommentRepo.DeleteByVideoIDWithTx(l.ctx, tx, req.Id); err != nil {
 			l.Errorf("delete comment by video failed, vid=%s, err=%v", req.Id, err)

@@ -58,7 +58,7 @@ func (l *TotpEnrollConfirmLogic) TotpEnrollConfirm(req *types.TotpEnrollConfirmR
 
 	return &types.TotpEnrollConfirmResp{
 		Status: 200,
-		Data: types.TotpEnrollConfirmItem{
+		Data: &types.TotpEnrollConfirmItem{
 			Enabled: true,
 		},
 		Msg: "确认2FA启用成功",

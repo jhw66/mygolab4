@@ -45,7 +45,7 @@ func (l *RefreshTokenLogic) RefreshToken(req *types.RefreshTokenReq) (resp *type
 	return &types.RefreshTokenResp{
 		Status: 200,
 		Msg:    "刷新成功",
-		Data: types.RefreshTokenItem{
+		Data: &types.RefreshTokenItem{
 			AccessToken: token,
 		},
 	}, nil

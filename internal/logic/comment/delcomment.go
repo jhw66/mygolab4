@@ -13,6 +13,7 @@ import (
 	"github.com/jhw66/myvideo_lab4/pkg/auth"
 
 	"github.com/zeromicro/go-zero/core/logx"
+	"gorm.io/gorm"
 )
 
 type DelCommentLogic struct {
@@ -47,12 +48,35 @@ func (l *DelCommentLogic) DelComment(req *types.DelCommentReq) (resp *types.Comm
 		l.Errorf("warmup comment count failed, vid=%s, err=%v", req.Vid, err)
 	}
 
-	if err = l.svcCtx.CommentRepo.Delete(l.ctx, comment); err != nil {
+	deletedCount := int64(1)
+	err = l.svcCtx.TransactionRepository.WithTransaction(l.ctx, func(tx *gorm.DB) error {
+		if comment.CommentID == nil {
+			replyCount, err := l.svcCtx.CommentRepo.CountRepliesByRootIDWithTx(l.ctx, tx, req.Vid, comment.ID)
+			if err != nil {
+				return err
+			}
+			deletedCount += replyCount
+			if err := l.svcCtx.CommentFavoriteRepo.DeleteByRootIDWithTx(l.ctx, tx, comment.ID); err != nil {
+				return err
+			}
+			if err := l.svcCtx.CommentRepo.DeleteByRootIDWithTx(l.ctx, tx, comment.ID); err != nil {
+				return err
+			}
+		}
+		if err := l.svcCtx.CommentFavoriteRepo.DeleteByCommentIDWithTx(l.ctx, tx, comment.ID); err != nil {
+			return err
+		}
+		return l.svcCtx.CommentRepo.DeleteWithTx(l.ctx, tx, comment)
+	})
+	if err != nil {
 		return &types.CommonRsp{Status: 500, Msg: "删除评论失败"}, errors.New("删除评论失败")
 	}
 
-	if err := l.svcCtx.CommentCache.DecrCount(l.ctx, req.Vid); err != nil {
-		l.Errorf("decr comment count failed, vid=%s, err=%v", req.Vid, err)
+	for i := int64(0); i < deletedCount; i++ {
+		if err := l.svcCtx.CommentCache.DecrCount(l.ctx, req.Vid); err != nil {
+			l.Errorf("decr comment count failed, vid=%s, err=%v", req.Vid, err)
+			break
+		}
 	}
 	if err := core.UpdateRankScore(l.ctx, l.svcCtx, req.Vid); err != nil {
 		l.Errorf("update rank score failed, vid=%s, err=%v", req.Vid, err)

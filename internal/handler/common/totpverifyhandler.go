@@ -44,9 +44,11 @@ func TotpVerifyHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 				Error:  err.Error(),
 			})
 		} else {
+			accessToken := resp.Data.AccessToken
+			refreshToken := resp.Data.RefreshToken
 			http.SetCookie(w, &http.Cookie{
 				Name:     "refresh_token",
-				Value:    resp.Data.RefreshToken,
+				Value:    refreshToken,
 				Path:     "/api/v1/refresh",
 				MaxAge:   int(svcCtx.Config.Jwt.RefreshTokenExpire),
 				SameSite: http.SameSiteStrictMode,
@@ -54,14 +56,13 @@ func TotpVerifyHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 			})
 			http.SetCookie(w, &http.Cookie{
 				Name:     "access_token",
-				Value:    resp.Data.AccessToken,
+				Value:    accessToken,
 				Path:     "/",
 				MaxAge:   int(svcCtx.Config.Jwt.AccessTokenExpire),
 				SameSite: http.SameSiteStrictMode,
 				HttpOnly: true,
 			})
-			resp.Data.AccessToken = ""
-			resp.Data.RefreshToken = ""
+			resp.Data = nil
 			httpx.OkJsonCtx(r.Context(), w, resp)
 		}
 	}

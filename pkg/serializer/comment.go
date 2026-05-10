@@ -6,12 +6,15 @@ import (
 )
 
 type Comment struct {
-	ID        string `json:"id"`
-	UserID    string `json:"user_id"`
-	VideoID   string `json:"video_id"`
-	Content   string `json:"content"`
-	CreatedAt int64  `json:"created_at"`
-	User      User   `json:"user"`
+	ID            string `json:"id"`
+	UserID        string `json:"user_id"`
+	VideoID       string `json:"video_id"`
+	CommentID     string `json:"comment_id,omitempty"`
+	RootID        string `json:"root_id,omitempty"`
+	Content       string `json:"content"`
+	FavoriteCount uint   `json:"favorite_count"`
+	CreatedAt     int64  `json:"created_at"`
+	User          User   `json:"user"`
 }
 
 type CommentList struct {
@@ -25,21 +28,31 @@ func CommentListRspFromModels(comments []model.Comment, total int64, page int, p
 	items := make([]types.CommentItem, 0, len(comments))
 	for i := range comments {
 		items = append(items, types.CommentItem{
-			Id:        comments[i].ID,
-			UserId:    comments[i].UserID,
-			VideoId:   comments[i].VideoID,
-			Content:   comments[i].Content,
-			CreatedAt: comments[i].CreatedAt.Unix(),
-			User:      UserItemFromModel(&comments[i].User),
+			Id:            comments[i].ID,
+			UserId:        comments[i].UserID,
+			VideoId:       comments[i].VideoID,
+			CommentId:     stringValue(comments[i].CommentID),
+			RootId:        stringValue(comments[i].RootID),
+			Content:       comments[i].Content,
+			FavoriteCount: comments[i].FavoriteCount,
+			CreatedAt:     comments[i].CreatedAt.Unix(),
+			User:          UserItemFromModel(&comments[i].User),
 		})
 	}
 	return &types.CommentListRsp{
 		Status: 200,
-		Data: types.CommentListData{
+		Data: &types.CommentListData{
 			Total:    total,
 			Page:     page,
 			PageSize: pageSize,
 			Comments: items,
 		},
 	}
+}
+
+func stringValue(value *string) string {
+	if value == nil {
+		return ""
+	}
+	return *value
 }

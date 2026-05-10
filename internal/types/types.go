@@ -4,17 +4,21 @@
 package types
 
 type CommentAddReq struct {
-	Vid     string `path:"vid"`
-	Content string `json:"content"`
+	Vid       string `path:"vid"`
+	CommentId string `json:"comment_id,optional"`
+	Content   string `json:"content"`
 }
 
 type CommentItem struct {
-	Id        string   `json:"id"`
-	UserId    string   `json:"user_id"`
-	VideoId   string   `json:"video_id"`
-	Content   string   `json:"content"`
-	CreatedAt int64    `json:"created_at"`
-	User      UserItem `json:"user"`
+	Id            string   `json:"id"`
+	UserId        string   `json:"user_id"`
+	VideoId       string   `json:"video_id"`
+	CommentId     string   `json:"comment_id,omitempty"`
+	RootId        string   `json:"root_id,omitempty"`
+	Content       string   `json:"content"`
+	FavoriteCount uint     `json:"favorite_count"`
+	CreatedAt     int64    `json:"created_at"`
+	User          UserItem `json:"user"`
 }
 
 type CommentListData struct {
@@ -25,22 +29,23 @@ type CommentListData struct {
 }
 
 type CommentListReq struct {
-	Vid      string `path:"vid"`
-	Page     int    `form:"page,optional"`
-	PageSize int    `form:"page_size,optional"`
+	Vid       string `path:"vid"`
+	CommentId string `form:"comment_id,optional"`
+	Page      int    `form:"page,optional"`
+	PageSize  int    `form:"page_size,optional"`
 }
 
 type CommentListRsp struct {
-	Status int             `json:"status"`
-	Data   CommentListData `json:"data"`
-	Msg    string          `json:"msg"`
-	Error  string          `json:"error"`
+	Status int              `json:"status"`
+	Data   *CommentListData `json:"data,omitempty"`
+	Msg    string           `json:"msg,omitempty"`
+	Error  string           `json:"error,omitempty"`
 }
 
 type CommonRsp struct {
 	Status int    `json:"status"`
-	Msg    string `json:"msg"`
-	Error  string `json:"error"`
+	Msg    string `json:"msg,omitempty"`
+	Error  string `json:"error,omitempty"`
 }
 
 type DelCommentReq struct {
@@ -58,14 +63,15 @@ type Disable2FAReq struct {
 }
 
 type Disable2FAResp struct {
-	Status int            `json:"status"`
-	Data   Disable2FAItem `json:"data"`
-	Msg    string         `json:"msg"`
-	Error  string         `json:"error"`
+	Status int             `json:"status"`
+	Data   *Disable2FAItem `json:"data,omitempty"`
+	Msg    string          `json:"msg,omitempty"`
+	Error  string          `json:"error,omitempty"`
 }
 
 type FavoriteReq struct {
-	Vid string `path:"vid"`
+	Vid       string `path:"vid"`
+	CommentId string `json:"comment_id,optional"`
 }
 
 type LoginItem struct {
@@ -80,14 +86,14 @@ type RefreshTokenItem struct {
 }
 
 type RefreshTokenReq struct {
-	RefreshToken string `json:"refresh_token"`
+	RefreshToken string `json:"refresh_token,optional"`
 }
 
 type RefreshTokenResp struct {
-	Status int              `json:"status"`
-	Data   RefreshTokenItem `json:"data"`
-	Msg    string           `json:"msg"`
-	Error  string           `json:"error"`
+	Status int               `json:"status"`
+	Data   *RefreshTokenItem `json:"data,omitempty"`
+	Msg    string            `json:"msg,omitempty"`
+	Error  string            `json:"error,omitempty"`
 }
 
 type RelationReq struct {
@@ -103,10 +109,10 @@ type TotpEnrollConfirmReq struct {
 }
 
 type TotpEnrollConfirmResp struct {
-	Status int                   `json:"status"`
-	Data   TotpEnrollConfirmItem `json:"data"`
-	Msg    string                `json:"msg"`
-	Error  string                `json:"error"`
+	Status int                    `json:"status"`
+	Data   *TotpEnrollConfirmItem `json:"data,omitempty"`
+	Msg    string                 `json:"msg,omitempty"`
+	Error  string                 `json:"error,omitempty"`
 }
 
 type TotpEnrollStartItem struct {
@@ -120,15 +126,15 @@ type TotpEnrollStartReq struct {
 }
 
 type TotpEnrollStartResp struct {
-	Status int                 `json:"status"`
-	Data   TotpEnrollStartItem `json:"data"`
-	Msg    string              `json:"msg"`
-	Error  string              `json:"error"`
+	Status int                  `json:"status"`
+	Data   *TotpEnrollStartItem `json:"data,omitempty"`
+	Msg    string               `json:"msg,omitempty"`
+	Error  string               `json:"error,omitempty"`
 }
 
 type TotpVerifyItem struct {
-	AccessToken  string `json:"accessToken"`
-	RefreshToken string `json:"refreshToken"`
+	AccessToken  string `json:"accessToken,omitempty"`
+	RefreshToken string `json:"refreshToken,omitempty"`
 }
 
 type TotpVerifyReq struct {
@@ -136,10 +142,10 @@ type TotpVerifyReq struct {
 }
 
 type TotpVerifyResp struct {
-	Status int            `json:"status"`
-	Data   TotpVerifyItem `json:"data"`
-	Msg    string         `json:"msg"`
-	Error  string         `json:"error"`
+	Status int             `json:"status"`
+	Data   *TotpVerifyItem `json:"data,omitempty"`
+	Msg    string          `json:"msg,omitempty"`
+	Error  string          `json:"error,omitempty"`
 }
 
 type UserItem struct {
@@ -151,10 +157,10 @@ type UserItem struct {
 }
 
 type UserListRsp struct {
-	Status int        `json:"status"`
-	Data   []UserItem `json:"data"`
-	Msg    string     `json:"msg"`
-	Error  string     `json:"error"`
+	Status int         `json:"status"`
+	Data   *[]UserItem `json:"data,omitempty"`
+	Msg    string      `json:"msg,omitempty"`
+	Error  string      `json:"error,omitempty"`
 }
 
 type UserLoginReq struct {
@@ -163,10 +169,10 @@ type UserLoginReq struct {
 }
 
 type UserLoginResp struct {
-	Status int       `json:"status"`
-	Data   LoginItem `json:"data"`
-	Msg    string    `json:"msg"`
-	Error  string    `json:"error"`
+	Status int        `json:"status"`
+	Data   *LoginItem `json:"data,omitempty"`
+	Msg    string     `json:"msg,omitempty"`
+	Error  string     `json:"error,omitempty"`
 }
 
 type UserRegisterReq struct {
@@ -177,16 +183,17 @@ type UserRegisterReq struct {
 }
 
 type UserRegisterResp struct {
-	Status int    `json:"status"`
-	Msg    string `json:"msg"`
-	Error  string `json:"error"`
+	Status int       `json:"status"`
+	Data   *UserItem `json:"data,omitempty"`
+	Msg    string    `json:"msg,omitempty"`
+	Error  string    `json:"error,omitempty"`
 }
 
 type UserRsp struct {
-	Status int      `json:"status"`
-	Data   UserItem `json:"data"`
-	Msg    string   `json:"msg"`
-	Error  string   `json:"error"`
+	Status int       `json:"status"`
+	Data   *UserItem `json:"data,omitempty"`
+	Msg    string    `json:"msg,omitempty"`
+	Error  string    `json:"error,omitempty"`
 }
 
 type VideoIdReq struct {
@@ -205,17 +212,17 @@ type VideoItem struct {
 }
 
 type VideoListRsp struct {
-	Status int         `json:"status"`
-	Data   []VideoItem `json:"data"`
-	Msg    string      `json:"msg"`
-	Error  string      `json:"error"`
+	Status int          `json:"status"`
+	Data   *[]VideoItem `json:"data,omitempty"`
+	Msg    string       `json:"msg,omitempty"`
+	Error  string       `json:"error,omitempty"`
 }
 
 type VideoRsp struct {
-	Status int       `json:"status"`
-	Data   VideoItem `json:"data"`
-	Msg    string    `json:"msg"`
-	Error  string    `json:"error"`
+	Status int        `json:"status"`
+	Data   *VideoItem `json:"data,omitempty"`
+	Msg    string     `json:"msg,omitempty"`
+	Error  string     `json:"error,omitempty"`
 }
 
 type VideoSearchReq struct {

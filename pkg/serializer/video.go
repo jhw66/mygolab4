@@ -30,9 +30,10 @@ func VideoItemFromModel(video *model.Video) types.VideoItem {
 }
 
 func VideoRspFromModel(video *model.Video) *types.VideoRsp {
+	item := VideoItemFromModel(video)
 	return &types.VideoRsp{
 		Status: 200,
-		Data:   VideoItemFromModel(video),
+		Data:   &item,
 	}
 }
 
@@ -43,6 +44,6 @@ func VideoListRspFromModels(videos []model.Video) *types.VideoListRsp {
 	}
 	return &types.VideoListRsp{
 		Status: 200,
-		Data:   items,
+		Data:   &items,
 	}
 }

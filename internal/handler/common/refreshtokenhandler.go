@@ -36,15 +36,16 @@ func RefreshTokenHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 			})
 			return
 		}
+		accessToken := resp.Data.AccessToken
 		http.SetCookie(w, &http.Cookie{
 			Name:     "access_token",
-			Value:    resp.Data.AccessToken,
+			Value:    accessToken,
 			Path:     "/",
 			MaxAge:   int(svcCtx.Config.Jwt.AccessTokenExpire),
 			SameSite: http.SameSiteStrictMode,
 			HttpOnly: true,
 		})
-		resp.Data.AccessToken = ""
+		resp.Data = nil
 		httpx.WriteJsonCtx(r.Context(), w, 200, resp)
 	}
 }

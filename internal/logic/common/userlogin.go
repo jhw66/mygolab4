@@ -58,7 +58,7 @@ func (l *UserLoginLogic) UserLogin(req *types.UserLoginReq) (resp *types.UserLog
 
 		return &types.UserLoginResp{
 			Status: 200,
-			Data: types.LoginItem{
+			Data: &types.LoginItem{
 				Need2FA:        true,
 				ChallengeToken: challengeToken,
 			},
@@ -84,7 +84,7 @@ func (l *UserLoginLogic) UserLogin(req *types.UserLoginReq) (resp *types.UserLog
 
 	return &types.UserLoginResp{
 		Status: 200,
-		Data: types.LoginItem{
+		Data: &types.LoginItem{
 			Need2FA:      false,
 			AccessToken:  accessToken,
 			RefreshToken: refreshToken,
