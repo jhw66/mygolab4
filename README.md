@@ -25,3 +25,5 @@ ID部分采用雪花ID，并且利用hook保证生成id的时候用到雪花id
 完成Docker部署，并且传到了docker hub上，就是pull下来总是启动失败(研究ing)
 
 改用go-zero架构，优化了调用mysql，redis等工具逻辑
+
+新增2FA认证机制，提供开启与关闭2FA接口，以二维码方式分发secret
