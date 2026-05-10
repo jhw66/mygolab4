@@ -57,7 +57,7 @@ func NewServiceContext(c config.Config) *ServiceContext {
 		Config:                c,
 		GormDB:                gormDB,
 		Redis:                 rdb,
-		AccessAuth:            middleware.NewAccessAuthMiddleware(userRepo).Handle,
+		AccessAuth:            middleware.NewAccessAuthMiddleware(userRepo, c).Handle,
 		UserRepo:              userRepo,
 		VideoRepo:             video.NewVideoRepository(gormDB),
 		CommentRepo:           comment.NewCommentRepository(gormDB),

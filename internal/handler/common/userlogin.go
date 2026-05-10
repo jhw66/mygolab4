@@ -5,12 +5,10 @@ package common
 
 import (
 	"net/http"
-	"time"
 
 	"github.com/jhw66/myvideo_lab4/internal/logic/common"
 	"github.com/jhw66/myvideo_lab4/internal/svc"
 	"github.com/jhw66/myvideo_lab4/internal/types"
-	"github.com/jhw66/myvideo_lab4/pkg/utils"
 	"github.com/zeromicro/go-zero/rest/httpx"
 )
 
@@ -29,36 +27,33 @@ func UserLoginHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 		l := common.NewUserLoginLogic(r.Context(), svcCtx)
 		resp, err := l.UserLogin(&req)
 		if err != nil {
-			httpx.WriteJsonCtx(r.Context(), w, 200, resp)
-		} else {
-			if resp.Data.Id != "" {
-				accessToken, accessErr := utils.GenerateAccessToken(resp.Data.Id)
-				refreshToken, refreshErr := utils.GenerateRefreshToken(resp.Data.Id)
-				if accessErr == nil && refreshErr == nil {
-					http.SetCookie(w, &http.Cookie{
-						Name:     "refresh_token",
-						Value:    refreshToken,
-						Path:     "/api/v1/refresh",
-						MaxAge:   int((24 * time.Hour).Seconds()),
-						SameSite: http.SameSiteStrictMode,
-						HttpOnly: true,
-					})
-					http.SetCookie(w, &http.Cookie{
-						Name:   "access_token",
-						Value:  accessToken,
-						Path:   "/",
-						MaxAge: int((15 * time.Minute).Seconds()),
-					})
-				} else {
-					httpx.WriteJsonCtx(r.Context(), w, 200, types.CommonRsp{
-						Status: 500,
-						Msg:    "登录成功，但生成令牌失败",
-					})
-					return
-				}
-			}
-			httpx.WriteJsonCtx(r.Context(), w, 200, resp)
+			httpx.WriteJsonCtx(r.Context(), w, 200, types.CommonRsp{
+				Status: 500,
+				Msg:    "登录失败",
+				Error:  err.Error(),
+			})
+			return
 		}
+		if resp.Data.Need2FA == false {
+			http.SetCookie(w, &http.Cookie{
+				Name:     "refresh_token",
+				Value:    resp.Data.RefreshToken,
+				Path:     "/api/v1/refresh",
+				MaxAge:   int(svcCtx.Config.Jwt.RefreshTokenExpire),
+				SameSite: http.SameSiteStrictMode,
+				HttpOnly: true,
+			})
+			http.SetCookie(w, &http.Cookie{
+				Name:     "access_token",
+				Value:    resp.Data.AccessToken,
+				Path:     "/",
+				MaxAge:   int(svcCtx.Config.Jwt.AccessTokenExpire),
+				SameSite: http.SameSiteStrictMode,
+				HttpOnly: true,
+			})
+			resp.Data.AccessToken = ""
+			resp.Data.RefreshToken = ""
+		}
+		httpx.WriteJsonCtx(r.Context(), w, 200, resp)
 	}
-
 }

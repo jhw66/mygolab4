@@ -27,7 +27,11 @@ func UserRegisterHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 		l := common.NewUserRegisterLogic(r.Context(), svcCtx)
 		resp, err := l.UserRegister(&req)
 		if err != nil {
-			httpx.WriteJsonCtx(r.Context(), w, 200, resp)
+			httpx.WriteJsonCtx(r.Context(), w, 200, &types.CommonRsp{
+				Status: 400,
+				Msg:    "注册失败",
+				Error:  err.Error(),
+			})
 			return
 		}
 		httpx.WriteJsonCtx(r.Context(), w, 200, resp)

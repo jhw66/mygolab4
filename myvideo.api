@@ -9,10 +9,30 @@ info (
 
 // ==================== 请求类型 ====================
 type (
-	CommonRsp {
-		Status int    `json:"status"`
-		Msg    string `json:"msg,optional"`
-		Error  string `json:"error,optional"`
+	LoginItem {
+		Need2FA        bool   `json:"need2fa"`
+		ChallengeToken string `json:"challengeToken,omitempty"`
+		AccessToken  string `json:"accessToken,omitempty"`
+		RefreshToken string `json:"refreshToken,omitempty"`
+	}
+	TotpEnrollStartItem {
+		Issuer        string `json:"issuer"`
+		AccountName   string `json:"accountName"`
+		OTPAuthURL    string `json:"otpauthUrl"`
+		QRCodeDataURL string `json:"qrCodeDataUrl"`
+	}
+	TotpEnrollConfirmItem {
+		Enabled bool `json:"enabled"`
+	}
+	Disable2FAItem {
+		Enabled bool `json:"enabled"`
+	}
+	TotpVerifyItem {
+		AccessToken  string `json:"accessToken"`
+		RefreshToken string `json:"refreshToken"`
+	}
+	RefreshTokenItem {
+		AccessToken string `json:"accessToken"`
 	}
 	UserItem {
 		Id        string `json:"id"`
@@ -45,6 +65,76 @@ type (
 		PageSize int           `json:"page_size"`
 		Comments []CommentItem `json:"comments"`
 	}
+	CommonRsp {
+		Status int    `json:"status"`
+		Msg    string `json:"msg,optional"`
+		Error  string `json:"error,optional"`
+	}
+	UserRegisterReq {
+		NickName        string `json:"nick_name"`
+		UserName        string `json:"user_name"`
+		Password        string `json:"password"`
+		PasswordConfirm string `json:"password_confirm"`
+	}
+	UserRegisterResp {
+		Status int    `json:"status"`
+		Msg    string `json:"msg,optional"`
+		Error  string `json:"error,optional"`
+	}
+	UserLoginReq {
+		UserName string `json:"user_name"`
+		Password string `json:"password"`
+	}
+	UserLoginResp {
+		Status int       `json:"status"`
+		Data   LoginItem `json:"data"`
+		Msg    string    `json:"msg,optional"`
+		Error  string    `json:"error,optional"`
+	}
+	TotpEnrollStartReq  {}
+	TotpEnrollStartResp {
+		Status int                 `json:"status"`
+		Data   TotpEnrollStartItem `json:"data"`
+		Msg    string              `json:"msg,optional"`
+		Error  string              `json:"error,optional"`
+	}
+	TotpEnrollConfirmReq {
+		Code string `json:"code"`
+	}
+	TotpEnrollConfirmResp {
+		Status int                   `json:"status"`
+		Data   TotpEnrollConfirmItem `json:"data"`
+		Msg    string                `json:"msg,optional"`
+		Error  string                `json:"error,optional"`
+	}
+	TotpVerifyReq {
+		Code           string `json:"code"`
+	}
+	TotpVerifyResp {
+		Status int    `json:"status"`
+		Data   TotpVerifyItem `json:"data"`
+		Msg    string `json:"msg,optional"`
+		Error  string `json:"error,optional"`
+	}
+	Disable2FAReq {
+		Password string `json:"password"`
+		Code     string `json:"code"`
+	}
+	Disable2FAResp {
+		Status int            `json:"status"`
+		Data   Disable2FAItem `json:"data"`
+		Msg    string         `json:"msg,optional"`
+		Error  string         `json:"error,optional"`
+	}
+	RefreshTokenReq  {
+		RefreshToken string `json:"refresh_token"`
+	}
+	RefreshTokenResp {
+		Status int    `json:"status"`
+		Data   RefreshTokenItem `json:"data"`
+		Msg    string `json:"msg,optional"`
+		Error  string `json:"error,optional"`
+	}
 	UserRsp {
 		Status int      `json:"status"`
 		Data   UserItem `json:"data"`
@@ -74,16 +164,6 @@ type (
 		Data   CommentListData `json:"data"`
 		Msg    string          `json:"msg,optional"`
 		Error  string          `json:"error,optional"`
-	}
-	UserRegisterReq {
-		NickName        string `json:"nick_name"`
-		UserName        string `json:"user_name"`
-		Password        string `json:"password"`
-		PasswordConfirm string `json:"password_confirm"`
-	}
-	UserLoginReq {
-		UserName string `json:"user_name"`
-		Password string `json:"password"`
 	}
 	VideoSearchReq {
 		KeyWord string `form:"key_word"`
@@ -119,10 +199,16 @@ type (
 )
 service myvideo-api {
 	@handler UserRegister
-	post /user/register (UserRegisterReq) returns (UserRsp)
+	post /user/register (UserRegisterReq) returns (UserRegisterResp)
 
 	@handler UserLogin
-	post /user/login (UserLoginReq) returns (UserRsp)
+	post /user/login (UserLoginReq) returns (UserLoginResp)
+
+	@handler totpVerify
+	post /totp/verify (TotpVerifyReq) returns (TotpVerifyResp)
+
+	@handler RefreshToken
+	post /refresh (RefreshTokenReq) returns (RefreshTokenResp)
 
 	@handler VideoSearch
 	get /videos/search (VideoSearchReq) returns (VideoListRsp)
@@ -135,12 +221,25 @@ service myvideo-api {
 
 	@handler CommentList
 	get /comment/:vid (CommentListReq) returns (CommentListRsp)
-
-	@handler RefreshHandler
-	post /refresh returns (CommonRsp)
 }
 
 // ==================== 保护路由（JWT 认证） ====================
+@server (
+	prefix:     /api/v1/p/totp
+	group:      totp
+	middleware: AccessAuth
+)
+service myvideo-api {
+	@handler totpEnrollStart
+	post /enroll/start (TotpEnrollStartReq) returns (TotpEnrollStartResp)
+
+	@handler totpEnrollConfirm
+	post /enroll/confirm (TotpEnrollConfirmReq) returns (TotpEnrollConfirmResp)
+
+	@handler totpDisable
+	post /disable (Disable2FAReq) returns (Disable2FAResp)
+}
+
 @server (
 	prefix:     /api/v1/p/user
 	group:      user

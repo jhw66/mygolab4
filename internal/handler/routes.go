@@ -10,6 +10,7 @@ import (
 	common "github.com/jhw66/myvideo_lab4/internal/handler/common"
 	favorite "github.com/jhw66/myvideo_lab4/internal/handler/favorite"
 	relation "github.com/jhw66/myvideo_lab4/internal/handler/relation"
+	totp "github.com/jhw66/myvideo_lab4/internal/handler/totp"
 	user "github.com/jhw66/myvideo_lab4/internal/handler/user"
 	video "github.com/jhw66/myvideo_lab4/internal/handler/video"
 	"github.com/jhw66/myvideo_lab4/internal/svc"
@@ -47,7 +48,12 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 			{
 				Method:  http.MethodPost,
 				Path:    "/refresh",
-				Handler: common.RefreshHandler(serverCtx),
+				Handler: common.RefreshTokenHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/totp/verify",
+				Handler: common.TotpVerifyHandler(serverCtx),
 			},
 			{
 				Method:  http.MethodPost,
@@ -133,6 +139,30 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 			}...,
 		),
 		rest.WithPrefix("/api/v1/p/relation"),
+	)
+
+	server.AddRoutes(
+		rest.WithMiddlewares(
+			[]rest.Middleware{serverCtx.AccessAuth},
+			[]rest.Route{
+				{
+					Method:  http.MethodPost,
+					Path:    "/disable",
+					Handler: totp.TotpDisableHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodPost,
+					Path:    "/enroll/confirm",
+					Handler: totp.TotpEnrollConfirmHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodPost,
+					Path:    "/enroll/start",
+					Handler: totp.TotpEnrollStartHandler(serverCtx),
+				},
+			}...,
+		),
+		rest.WithPrefix("/api/v1/p/totp"),
 	)
 
 	server.AddRoutes(
