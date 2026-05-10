@@ -34,7 +34,7 @@ func UserLoginHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 			})
 			return
 		}
-		if resp.Data.Need2FA == false {
+		if resp.Data != nil && !resp.Data.Need2FA {
 			http.SetCookie(w, &http.Cookie{
 				Name:     "refresh_token",
 				Value:    resp.Data.RefreshToken,

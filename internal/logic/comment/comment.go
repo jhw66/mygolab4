@@ -44,14 +44,31 @@ func (l *CommentLogic) Comment(req *types.CommentAddReq) (resp *types.CommonRsp,
 		return &types.CommonRsp{Status: 404, Msg: "未找到该视频"}, errors.New("未找到该视频")
 	}
 
+	var commentID *string
+	var rootID *string
+	if req.CommentId != "" {
+		parent, err := l.svcCtx.CommentRepo.FindByIDAndVideo(l.ctx, req.CommentId, req.Vid)
+		if err != nil {
+			return &types.CommonRsp{Status: 404, Msg: "父评论不存在"}, errors.New("父评论不存在")
+		}
+		commentID = &parent.ID
+		if parent.RootID != nil {
+			rootID = parent.RootID
+		} else {
+			rootID = &parent.ID
+		}
+	}
+
 	if err := core.WarmUpCommentCount(l.ctx, l.svcCtx.CommentCache, l.svcCtx.VideoRepo, req.Vid); err != nil {
 		l.Errorf("warmup comment count failed, vid=%s, err=%v", req.Vid, err)
 	}
 
 	if err = l.svcCtx.CommentRepo.Create(l.ctx, &model.Comment{
-		UserID:  user.ID,
-		VideoID: req.Vid,
-		Content: req.Content,
+		UserID:    user.ID,
+		VideoID:   req.Vid,
+		CommentID: commentID,
+		RootID:    rootID,
+		Content:   req.Content,
 	}); err != nil {
 		return &types.CommonRsp{Status: 500, Msg: "评论保存失败"}, errors.New("评论保存失败")
 	}

@@ -62,7 +62,7 @@ func (l *TotpEnrollStartLogic) TotpEnrollStart(req *types.TotpEnrollStartReq) (r
 
 	return &types.TotpEnrollStartResp{
 		Status: 200,
-		Data: types.TotpEnrollStartItem{
+		Data: &types.TotpEnrollStartItem{
 			Issuer:        enrollment.Issuer,
 			AccountName:   enrollment.AccountName,
 			OTPAuthURL:    enrollment.OtpAuthUrl,

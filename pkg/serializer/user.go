@@ -24,9 +24,10 @@ func UserItemFromModel(user *model.User) types.UserItem {
 }
 
 func UserRspFromModel(user *model.User) *types.UserRsp {
+	item := UserItemFromModel(user)
 	return &types.UserRsp{
 		Status: 200,
-		Data:   UserItemFromModel(user),
+		Data:   &item,
 	}
 }
 
@@ -37,6 +38,6 @@ func UserListRspFromModels(users []model.User) *types.UserListRsp {
 	}
 	return &types.UserListRsp{
 		Status: 200,
-		Data:   items,
+		Data:   &items,
 	}
 }

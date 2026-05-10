@@ -18,8 +18,8 @@ type CommentCache interface {
 	DecrCount(ctx context.Context, vid string) error
 	DelCount(ctx context.Context, vid string) error
 	TryWarmupLock(ctx context.Context, vid string, ttl time.Duration) bool
-	GetList(ctx context.Context, vid string, page int, pageSize int) (string, error)
-	SetList(ctx context.Context, vid string, page int, pageSize int, payload []byte, ttl time.Duration) error
+	GetList(ctx context.Context, vid string, commentID string, page int, pageSize int) (string, error)
+	SetList(ctx context.Context, vid string, commentID string, page int, pageSize int, payload []byte, ttl time.Duration) error
 	InvalidateListByVideo(ctx context.Context, vid string) error
 }
 
@@ -39,8 +39,11 @@ func buildCommentWarmupLockKey(vid string) string {
 	return fmt.Sprintf("warmup_lock:comment_count:%s", vid)
 }
 
-func buildCommentListCacheKey(vid string, page int, pageSize int) string {
-	return "comment_list:video:" + vid + ":p" + strconv.Itoa(page) + ":s" + strconv.Itoa(pageSize)
+func buildCommentListCacheKey(vid string, commentID string, page int, pageSize int) string {
+	if commentID == "" {
+		commentID = "root"
+	}
+	return "comment_list:video:" + vid + ":comment:" + commentID + ":p" + strconv.Itoa(page) + ":s" + strconv.Itoa(pageSize)
 }
 
 func (c *commentCache) ExistsCount(ctx context.Context, vid string) (bool, error) {
@@ -80,12 +83,12 @@ func (c *commentCache) TryWarmupLock(ctx context.Context, vid string, ttl time.D
 	return ok
 }
 
-func (c *commentCache) GetList(ctx context.Context, vid string, page int, pageSize int) (string, error) {
-	return c.rdb.Get(ctx, buildCommentListCacheKey(vid, page, pageSize)).Result()
+func (c *commentCache) GetList(ctx context.Context, vid string, commentID string, page int, pageSize int) (string, error) {
+	return c.rdb.Get(ctx, buildCommentListCacheKey(vid, commentID, page, pageSize)).Result()
 }
 
-func (c *commentCache) SetList(ctx context.Context, vid string, page int, pageSize int, payload []byte, ttl time.Duration) error {
-	return c.rdb.Set(ctx, buildCommentListCacheKey(vid, page, pageSize), payload, ttl).Err()
+func (c *commentCache) SetList(ctx context.Context, vid string, commentID string, page int, pageSize int, payload []byte, ttl time.Duration) error {
+	return c.rdb.Set(ctx, buildCommentListCacheKey(vid, commentID, page, pageSize), payload, ttl).Err()
 }
 
 func (c *commentCache) InvalidateListByVideo(ctx context.Context, vid string) error {

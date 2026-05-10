@@ -29,7 +29,7 @@ func NewUserRegisterLogic(ctx context.Context, svcCtx *svc.ServiceContext) *User
 	}
 }
 
-func (l *UserRegisterLogic) UserRegister(req *types.UserRegisterReq) (resp *types.UserRsp, err error) {
+func (l *UserRegisterLogic) UserRegister(req *types.UserRegisterReq) (resp *types.UserRegisterResp, err error) {
 	if err := utils.ValidateRuneLength(req.NickName, 2, 30); err != nil {
 		return nil, err
 	}
@@ -82,15 +82,16 @@ func (l *UserRegisterLogic) UserRegister(req *types.UserRegisterReq) (resp *type
 	if err != nil {
 		return nil, errors.New("用户创建失败")
 	}
-	return &types.UserRsp{
+	item := types.UserItem{
+		Id:        createdUser.ID,
+		Username:  createdUser.UserName,
+		Nickname:  createdUser.NickName,
+		CreatedAt: int64(createdUser.CreatedAt.Unix()),
+		Avatar:    createdUser.Avatar,
+	}
+	return &types.UserRegisterResp{
 		Status: 200,
 		Msg:    "注册成功",
-		Data: types.UserItem{
-			Id:        createdUser.ID,
-			Username:  createdUser.UserName,
-			Nickname:  createdUser.NickName,
-			CreatedAt: int64(createdUser.CreatedAt.Unix()),
-			Avatar:    createdUser.Avatar,
-		},
+		Data:   &item,
 	}, nil
 }

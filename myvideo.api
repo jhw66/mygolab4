@@ -28,11 +28,11 @@ type (
 		Enabled bool `json:"enabled"`
 	}
 	TotpVerifyItem {
-		AccessToken  string `json:"accessToken"`
-		RefreshToken string `json:"refreshToken"`
+		AccessToken  string `json:"accessToken,omitempty"`
+		RefreshToken string `json:"refreshToken,omitempty"`
 	}
 	RefreshTokenItem {
-		AccessToken string `json:"accessToken"`
+		AccessToken string `json:"accessToken,omitempty"`
 	}
 	UserItem {
 		Id        string `json:"id"`
@@ -55,7 +55,10 @@ type (
 		Id        string   `json:"id"`
 		UserId    string   `json:"user_id"`
 		VideoId   string   `json:"video_id"`
+		CommentId string   `json:"comment_id,omitempty"`
+		RootId    string   `json:"root_id,omitempty"`
 		Content   string   `json:"content"`
+		FavoriteCount uint `json:"favorite_count"`
 		CreatedAt int64    `json:"created_at"`
 		User      UserItem `json:"user"`
 	}
@@ -67,8 +70,8 @@ type (
 	}
 	CommonRsp {
 		Status int    `json:"status"`
-		Msg    string `json:"msg,optional"`
-		Error  string `json:"error,optional"`
+		Msg    string `json:"msg,omitempty"`
+		Error  string `json:"error,omitempty"`
 	}
 	UserRegisterReq {
 		NickName        string `json:"nick_name"`
@@ -77,9 +80,10 @@ type (
 		PasswordConfirm string `json:"password_confirm"`
 	}
 	UserRegisterResp {
-		Status int    `json:"status"`
-		Msg    string `json:"msg,optional"`
-		Error  string `json:"error,optional"`
+		Status int       `json:"status"`
+		Data   *UserItem `json:"data,omitempty"`
+		Msg    string    `json:"msg,omitempty"`
+		Error  string    `json:"error,omitempty"`
 	}
 	UserLoginReq {
 		UserName string `json:"user_name"`
@@ -87,34 +91,34 @@ type (
 	}
 	UserLoginResp {
 		Status int       `json:"status"`
-		Data   LoginItem `json:"data"`
-		Msg    string    `json:"msg,optional"`
-		Error  string    `json:"error,optional"`
+		Data   *LoginItem `json:"data,omitempty"`
+		Msg    string     `json:"msg,omitempty"`
+		Error  string     `json:"error,omitempty"`
 	}
 	TotpEnrollStartReq  {}
 	TotpEnrollStartResp {
 		Status int                 `json:"status"`
-		Data   TotpEnrollStartItem `json:"data"`
-		Msg    string              `json:"msg,optional"`
-		Error  string              `json:"error,optional"`
+		Data   *TotpEnrollStartItem `json:"data,omitempty"`
+		Msg    string               `json:"msg,omitempty"`
+		Error  string               `json:"error,omitempty"`
 	}
 	TotpEnrollConfirmReq {
 		Code string `json:"code"`
 	}
 	TotpEnrollConfirmResp {
 		Status int                   `json:"status"`
-		Data   TotpEnrollConfirmItem `json:"data"`
-		Msg    string                `json:"msg,optional"`
-		Error  string                `json:"error,optional"`
+		Data   *TotpEnrollConfirmItem `json:"data,omitempty"`
+		Msg    string                 `json:"msg,omitempty"`
+		Error  string                 `json:"error,omitempty"`
 	}
 	TotpVerifyReq {
 		Code           string `json:"code"`
 	}
 	TotpVerifyResp {
-		Status int    `json:"status"`
-		Data   TotpVerifyItem `json:"data"`
-		Msg    string `json:"msg,optional"`
-		Error  string `json:"error,optional"`
+		Status int             `json:"status"`
+		Data   *TotpVerifyItem `json:"data,omitempty"`
+		Msg    string          `json:"msg,omitempty"`
+		Error  string          `json:"error,omitempty"`
 	}
 	Disable2FAReq {
 		Password string `json:"password"`
@@ -122,48 +126,48 @@ type (
 	}
 	Disable2FAResp {
 		Status int            `json:"status"`
-		Data   Disable2FAItem `json:"data"`
-		Msg    string         `json:"msg,optional"`
-		Error  string         `json:"error,optional"`
+		Data   *Disable2FAItem `json:"data,omitempty"`
+		Msg    string          `json:"msg,omitempty"`
+		Error  string          `json:"error,omitempty"`
 	}
 	RefreshTokenReq  {
-		RefreshToken string `json:"refresh_token"`
+		RefreshToken string `json:"refresh_token,optional"`
 	}
 	RefreshTokenResp {
-		Status int    `json:"status"`
-		Data   RefreshTokenItem `json:"data"`
-		Msg    string `json:"msg,optional"`
-		Error  string `json:"error,optional"`
+		Status int               `json:"status"`
+		Data   *RefreshTokenItem `json:"data,omitempty"`
+		Msg    string            `json:"msg,omitempty"`
+		Error  string            `json:"error,omitempty"`
 	}
 	UserRsp {
 		Status int      `json:"status"`
-		Data   UserItem `json:"data"`
-		Msg    string   `json:"msg,optional"`
-		Error  string   `json:"error,optional"`
+		Data   *UserItem `json:"data,omitempty"`
+		Msg    string    `json:"msg,omitempty"`
+		Error  string    `json:"error,omitempty"`
 	}
 	UserListRsp {
 		Status int        `json:"status"`
-		Data   []UserItem `json:"data"`
-		Msg    string     `json:"msg,optional"`
-		Error  string     `json:"error,optional"`
+		Data   *[]UserItem `json:"data,omitempty"`
+		Msg    string      `json:"msg,omitempty"`
+		Error  string      `json:"error,omitempty"`
 	}
 	VideoRsp {
 		Status int       `json:"status"`
-		Data   VideoItem `json:"data"`
-		Msg    string    `json:"msg,optional"`
-		Error  string    `json:"error,optional"`
+		Data   *VideoItem `json:"data,omitempty"`
+		Msg    string     `json:"msg,omitempty"`
+		Error  string     `json:"error,omitempty"`
 	}
 	VideoListRsp {
 		Status int         `json:"status"`
-		Data   []VideoItem `json:"data"`
-		Msg    string      `json:"msg,optional"`
-		Error  string      `json:"error,optional"`
+		Data   *[]VideoItem `json:"data,omitempty"`
+		Msg    string       `json:"msg,omitempty"`
+		Error  string       `json:"error,omitempty"`
 	}
 	CommentListRsp {
 		Status int             `json:"status"`
-		Data   CommentListData `json:"data"`
-		Msg    string          `json:"msg,optional"`
-		Error  string          `json:"error,optional"`
+		Data   *CommentListData `json:"data,omitempty"`
+		Msg    string           `json:"msg,omitempty"`
+		Error  string           `json:"error,omitempty"`
 	}
 	VideoSearchReq {
 		KeyWord string `form:"key_word"`
@@ -172,14 +176,17 @@ type (
 		Id string `path:"id"`
 	}
 	FavoriteReq {
-		Vid string `path:"vid"`
+		Vid       string `path:"vid"`
+		CommentId string `json:"comment_id,optional"`
 	}
 	CommentAddReq {
-		Vid     string `path:"vid"`
-		Content string `json:"content"`
+		Vid       string `path:"vid"`
+		CommentId string `json:"comment_id,optional"`
+		Content   string `json:"content"`
 	}
 	CommentListReq {
 		Vid      string `path:"vid"`
+		CommentId string `form:"comment_id,optional"`
 		Page     int    `form:"page,optional"`
 		PageSize int    `form:"page_size,optional"`
 	}

@@ -81,7 +81,7 @@ func (l *TotpVerifyLogic) TotpVerify(req *types.TotpVerifyReq, challengeToken st
 
 	return &types.TotpVerifyResp{
 		Status: 200,
-		Data: types.TotpVerifyItem{
+		Data: &types.TotpVerifyItem{
 			AccessToken:  accessToken,
 			RefreshToken: refreshToken,
 		},

@@ -14,8 +14,16 @@ type CommentRepository interface {
 	FindByIDAndVideoWithTx(ctx context.Context, tx *gorm.DB, commentID, videoID string) (*model.Comment, error)
 	Delete(ctx context.Context, comment *model.Comment) error
 	DeleteWithTx(ctx context.Context, tx *gorm.DB, comment *model.Comment) error
+	DeleteByRootIDWithTx(ctx context.Context, tx *gorm.DB, rootID string) error
 	DeleteByVideoIDWithTx(ctx context.Context, tx *gorm.DB, videoID string) error
 	ListByVideoID(ctx context.Context, videoID string, page int, pageSize int) ([]model.Comment, error)
+	ListRootByVideoID(ctx context.Context, videoID string, page int, pageSize int) ([]model.Comment, error)
+	ListRepliesByRootID(ctx context.Context, videoID, rootID string, page int, pageSize int) ([]model.Comment, error)
+	CountRootByVideoID(ctx context.Context, videoID string) (int64, error)
+	CountRepliesByRootID(ctx context.Context, videoID, rootID string) (int64, error)
+	CountRepliesByRootIDWithTx(ctx context.Context, tx *gorm.DB, videoID, rootID string) (int64, error)
+	IncrementFavoriteCountWithTx(ctx context.Context, tx *gorm.DB, commentID string) error
+	DecrementFavoriteCountWithTx(ctx context.Context, tx *gorm.DB, commentID string) error
 }
 
 type commentRepository struct {
@@ -60,6 +68,12 @@ func (r *commentRepository) DeleteWithTx(ctx context.Context, tx *gorm.DB, comme
 	return tx.WithContext(ctx).Delete(comment).Error
 }
 
+func (r *commentRepository) DeleteByRootIDWithTx(ctx context.Context, tx *gorm.DB, rootID string) error {
+	return tx.WithContext(ctx).
+		Where("root_id = ?", rootID).
+		Delete(&model.Comment{}).Error
+}
+
 func (r *commentRepository) DeleteByVideoIDWithTx(ctx context.Context, tx *gorm.DB, videoID string) error {
 	return tx.WithContext(ctx).
 		Where("video_id = ?", videoID).
@@ -72,4 +86,58 @@ func (r *commentRepository) ListByVideoID(ctx context.Context, videoID string, p
 	err := r.db.WithContext(ctx).Preload("User").Where("video_id = ?", videoID).Order("created_at desc").
 		Limit(pageSize).Offset(offset).Find(&comments).Error
 	return comments, err
+}
+
+func (r *commentRepository) ListRootByVideoID(ctx context.Context, videoID string, page int, pageSize int) ([]model.Comment, error) {
+	offset := (page - 1) * pageSize
+	var comments []model.Comment
+	err := r.db.WithContext(ctx).Preload("User").
+		Where("video_id = ? AND comment_id IS NULL", videoID).
+		Order("created_at desc").Limit(pageSize).Offset(offset).Find(&comments).Error
+	return comments, err
+}
+
+func (r *commentRepository) ListRepliesByRootID(ctx context.Context, videoID, rootID string, page int, pageSize int) ([]model.Comment, error) {
+	offset := (page - 1) * pageSize
+	var comments []model.Comment
+	err := r.db.WithContext(ctx).Preload("User").
+		Where("video_id = ? AND root_id = ?", videoID, rootID).
+		Order("created_at asc").Limit(pageSize).Offset(offset).Find(&comments).Error
+	return comments, err
+}
+
+func (r *commentRepository) CountRootByVideoID(ctx context.Context, videoID string) (int64, error) {
+	var total int64
+	err := r.db.WithContext(ctx).Model(&model.Comment{}).
+		Where("video_id = ? AND comment_id IS NULL", videoID).
+		Count(&total).Error
+	return total, err
+}
+
+func (r *commentRepository) CountRepliesByRootID(ctx context.Context, videoID, rootID string) (int64, error) {
+	var total int64
+	err := r.db.WithContext(ctx).Model(&model.Comment{}).
+		Where("video_id = ? AND root_id = ?", videoID, rootID).
+		Count(&total).Error
+	return total, err
+}
+
+func (r *commentRepository) CountRepliesByRootIDWithTx(ctx context.Context, tx *gorm.DB, videoID, rootID string) (int64, error) {
+	var total int64
+	err := tx.WithContext(ctx).Model(&model.Comment{}).
+		Where("video_id = ? AND root_id = ?", videoID, rootID).
+		Count(&total).Error
+	return total, err
+}
+
+func (r *commentRepository) IncrementFavoriteCountWithTx(ctx context.Context, tx *gorm.DB, commentID string) error {
+	return tx.WithContext(ctx).Model(&model.Comment{}).
+		Where("id = ?", commentID).
+		UpdateColumn("favorite_count", gorm.Expr("favorite_count + ?", 1)).Error
+}
+
+func (r *commentRepository) DecrementFavoriteCountWithTx(ctx context.Context, tx *gorm.DB, commentID string) error {
+	return tx.WithContext(ctx).Model(&model.Comment{}).
+		Where("id = ? AND favorite_count > 0", commentID).
+		UpdateColumn("favorite_count", gorm.Expr("favorite_count - ?", 1)).Error
 }

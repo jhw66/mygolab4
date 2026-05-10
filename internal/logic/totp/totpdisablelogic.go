@@ -65,7 +65,7 @@ func (l *TotpDisableLogic) TotpDisable(req *types.Disable2FAReq) (resp *types.Di
 	}
 	return &types.Disable2FAResp{
 		Status: 200,
-		Data: types.Disable2FAItem{
+		Data: &types.Disable2FAItem{
 			Enabled: false,
 		},
 		Msg: "2FA已禁用",
