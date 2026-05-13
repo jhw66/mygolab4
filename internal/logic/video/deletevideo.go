@@ -33,18 +33,18 @@ func NewDeleteVideoLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Delet
 func (l *DeleteVideoLogic) DeleteVideo(req *types.VideoIdReq) (resp *types.CommonRsp, err error) {
 	user, ok := auth.GetUserFromContext(l.ctx)
 	if !ok || user == nil {
-		return &types.CommonRsp{Status: 401, Msg: "用户未登录"}, errors.New("用户未登录")
+		return nil, errors.New("用户未登录")
 	}
 	if req.Id == "" {
-		return &types.CommonRsp{Status: 400, Msg: "请传入视频id"}, errors.New("请传入视频id")
+		return nil, errors.New("请传入视频id")
 	}
 
 	video, err := l.svcCtx.VideoRepo.FindByID(l.ctx, req.Id)
 	if err != nil {
-		return &types.CommonRsp{Status: 404, Msg: "未找到该视频"}, errors.New("未找到该视频")
+		return nil, errors.New("未找到该视频")
 	}
 	if video.UserID != user.ID {
-		return &types.CommonRsp{Status: 403, Msg: "没有修改视频权限或者不存在该视频"}, errors.New("没有修改视频权限或者不存在该视频")
+		return nil, errors.New("没有修改视频权限或者不存在该视频")
 	}
 
 	err = l.svcCtx.TransactionRepository.WithTransaction(l.ctx, func(tx *gorm.DB) error {
@@ -81,7 +81,7 @@ func (l *DeleteVideoLogic) DeleteVideo(req *types.VideoIdReq) (resp *types.Commo
 		return nil
 	})
 	if err != nil {
-		return &types.CommonRsp{Status: 500, Msg: "视频删除失败"}, errors.New("视频删除失败")
+		return nil, errors.New("视频删除失败")
 	}
 
 	if err := deleteVideoCaches(l, req.Id); err != nil {

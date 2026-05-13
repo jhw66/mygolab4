@@ -31,15 +31,15 @@ func NewVideoDetailLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Video
 
 func (l *VideoDetailLogic) VideoDetail(req *types.VideoIdReq) (resp *types.VideoRsp, err error) {
 	if req.Id == "" {
-		return &types.VideoRsp{Status: 400, Msg: "请传入视频id"}, errors.New("请传入视频id")
+		return nil, errors.New("请传入视频id")
 	}
 
 	video, err := l.svcCtx.VideoRepo.FindByID(l.ctx, req.Id)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return &types.VideoRsp{Status: 404, Msg: "未找到该视频"}, errors.New("未找到该视频")
+			return nil, errors.New("未找到该视频")
 		}
-		return &types.VideoRsp{Status: 500, Msg: "查找失败"}, errors.New("查找失败")
+		return nil, errors.New("查找失败")
 	}
 
 	return serializer.VideoRspFromModel(video), nil

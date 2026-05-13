@@ -27,7 +27,11 @@ func UpdateVideoHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 		l := video.NewUpdateVideoLogic(r.Context(), svcCtx)
 		resp, err := l.UpdateVideo(&req, r)
 		if err != nil {
-			httpx.WriteJsonCtx(r.Context(), w, 200, resp)
+			httpx.WriteJsonCtx(r.Context(), w, 200, &types.CommonRsp{
+				Status: 400,
+				Msg:    "请求处理失败",
+				Error:  err.Error(),
+			})
 			return
 		}
 		httpx.WriteJsonCtx(r.Context(), w, 200, resp)

@@ -31,27 +31,27 @@ func NewRelationActionLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Re
 func (l *RelationActionLogic) RelationAction(req *types.RelationReq) (resp *types.CommonRsp, err error) {
 	user, ok := auth.GetUserFromContext(l.ctx)
 	if !ok || user == nil {
-		return &types.CommonRsp{Status: 401, Msg: "用户未登录"}, errors.New("用户未登录")
+		return nil, errors.New("用户未登录")
 	}
 	if user.ID == req.Uid {
-		return &types.CommonRsp{Status: 400, Msg: "不可关注自己"}, errors.New("不可关注自己")
+		return nil, errors.New("不可关注自己")
 	}
 	if _, err := l.svcCtx.UserRepo.FindByID(l.ctx, req.Uid); err != nil {
-		return &types.CommonRsp{Status: 404, Msg: "目标用户不存在"}, errors.New("目标用户不存在")
+		return nil, errors.New("目标用户不存在")
 	}
 
 	exists, err := l.svcCtx.RelationRepo.ExistsByUserAndTarget(l.ctx, user.ID, req.Uid)
 	if err != nil {
-		return &types.CommonRsp{Status: 500, Msg: "关注操作失败"}, errors.New("关注操作失败")
+		return nil, errors.New("关注操作失败")
 	}
 	if exists {
 		if err := l.svcCtx.RelationRepo.DeleteByUserAndTarget(l.ctx, user.ID, req.Uid); err != nil {
-			return &types.CommonRsp{Status: 500, Msg: "取消关注失败"}, errors.New("取消关注失败")
+			return nil, errors.New("取消关注失败")
 		}
-		return &types.CommonRsp{Status: 200, Msg: "取消关注成功"}, nil
+		return nil, nil
 	}
 	if err := l.svcCtx.RelationRepo.Create(l.ctx, user.ID, req.Uid); err != nil {
-		return &types.CommonRsp{Status: 500, Msg: "关注失败"}, errors.New("关注失败")
+		return nil, errors.New("关注失败")
 	}
 	return &types.CommonRsp{Status: 200, Msg: "关注成功"}, nil
 }

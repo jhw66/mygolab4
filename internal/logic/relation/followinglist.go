@@ -32,11 +32,11 @@ func NewFollowingListLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Fol
 func (l *FollowingListLogic) FollowingList() (resp *types.UserListRsp, err error) {
 	user, ok := auth.GetUserFromContext(l.ctx)
 	if !ok || user == nil {
-		return &types.UserListRsp{Status: 401, Msg: "用户未登录"}, errors.New("用户未登录")
+		return nil, errors.New("用户未登录")
 	}
 	users, err := l.svcCtx.RelationRepo.ListFollowingUsers(l.ctx, user.ID)
 	if err != nil {
-		return &types.UserListRsp{Status: 500, Msg: "查询关注列表失败"}, errors.New("查询关注列表失败")
+		return nil, errors.New("查询关注列表失败")
 	}
 	rsp := serializer.UserListRspFromModels(users)
 	rsp.Msg = "查询关注列表成功"

@@ -31,15 +31,15 @@ func NewVideoSearchLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Video
 
 func (l *VideoSearchLogic) VideoSearch(req *types.VideoSearchReq) (resp *types.VideoListRsp, err error) {
 	if err := utils.ValidateRuneLength(req.KeyWord, 1, 10); err != nil {
-		return &types.VideoListRsp{Status: 400, Msg: err.Error()}, err
+		return nil, err
 	}
 
 	videos, err := l.svcCtx.VideoRepo.SearchByTitle(l.ctx, req.KeyWord)
 	if err != nil {
-		return &types.VideoListRsp{Status: 500, Msg: "查找失败"}, errors.New("查找失败")
+		return nil, errors.New("查找失败")
 	}
 	if len(videos) == 0 {
-		return &types.VideoListRsp{Status: 404, Msg: "未找到相关视频"}, errors.New("未找到相关视频")
+		return nil, errors.New("未找到相关视频")
 	}
 
 	return serializer.VideoListRspFromModels(videos), nil

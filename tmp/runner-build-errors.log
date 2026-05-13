@@ -1,0 +1,2 @@
+# github.com/jhw66/myvideo_lab4/internal/logic/video
+internal\logic\video\deletevideo.go:91:26: unknown field Code in struct literal of type types.CommonRsp

@@ -16,7 +16,7 @@ func VideoSearchHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req types.VideoSearchReq
 		if err := httpx.Parse(r, &req); err != nil {
-			httpx.WriteJsonCtx(r.Context(), w, 200, &types.VideoListRsp{
+			httpx.WriteJsonCtx(r.Context(), w, 200, &types.CommonRsp{
 				Status: 400,
 				Msg:    "请求参数错误",
 				Error:  err.Error(),
@@ -27,7 +27,11 @@ func VideoSearchHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 		l := common.NewVideoSearchLogic(r.Context(), svcCtx)
 		resp, err := l.VideoSearch(&req)
 		if err != nil {
-			httpx.WriteJsonCtx(r.Context(), w, 200, resp)
+			httpx.WriteJsonCtx(r.Context(), w, 200, &types.CommonRsp{
+				Status: 400,
+				Msg:    "搜索视频失败",
+				Error:  err.Error(),
+			})
 			return
 		}
 		httpx.WriteJsonCtx(r.Context(), w, 200, resp)

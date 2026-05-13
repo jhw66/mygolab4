@@ -36,7 +36,7 @@ func buildCommentCountKey(vid string) string {
 }
 
 func buildCommentWarmupLockKey(vid string) string {
-	return fmt.Sprintf("warmup_lock:comment_count:%s", vid)
+	return "warmup_lock:comment_count:" + vid
 }
 
 func buildCommentListCacheKey(vid string, commentID string, page int, pageSize int) string {

@@ -34,29 +34,33 @@ func NewUserAvatarLogic(ctx context.Context, svcCtx *svc.ServiceContext) *UserAv
 func (l *UserAvatarLogic) UserAvatar(r *http.Request) (resp *types.UserRsp, err error) {
 	user, ok := auth.GetUserFromContext(l.ctx)
 	if !ok || user == nil {
-		return &types.UserRsp{Status: 401, Msg: "用户未登录"}, errors.New("用户未登录")
+		return nil, errors.New("用户未登录")
 	}
 	if err = utils.ParseMultipartForm(r, 32<<20); err != nil {
-		return &types.UserRsp{Status: 400, Msg: "请求格式错误"}, errors.New("请求格式错误")
+		return nil, errors.New("请求格式错误")
 	}
 	file, err := utils.GetFormFile(r, "avatar")
 	if err != nil {
-		return &types.UserRsp{Status: 400, Msg: "头像文件不能为空"}, errors.New("头像文件不能为空")
+		return nil, errors.New("头像文件不能为空")
 	}
 
 	avatarDiskPath, avatarWebPath, cleanupOldAvatar, err := utils.ReplaceStoredFile("static/avatar", "avatar", user.ID, file, user.Avatar)
 	if err != nil {
-		return &types.UserRsp{Status: 500, Msg: "保存头像失败"}, errors.New("保存头像失败")
+		return nil, errors.New("保存头像失败")
 	}
 
 	user.Avatar = avatarWebPath
 	err = l.svcCtx.UserRepo.Update(l.ctx, user)
 	if err != nil {
-		_ = utils.RemoveIfExists(avatarDiskPath)
-		return &types.UserRsp{Status: 500, Msg: "更新用户头像失败"}, errors.New("更新用户头像失败")
+		if err := utils.RemoveIfExists(avatarDiskPath); err != nil {
+			l.Errorf("failed to remove new avatar file after update failure, path=%s, err=%v", avatarDiskPath, err)
+		}
+		return nil, errors.New("更新用户头像失败")
 	}
 	if cleanupOldAvatar != nil {
-		_ = cleanupOldAvatar()
+		if err := cleanupOldAvatar(); err != nil {
+			l.Errorf("cleanup old avatar failed, err=%v", err)
+		}
 	}
 
 	return serializer.UserRspFromModel(user), nil

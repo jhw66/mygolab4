@@ -32,12 +32,12 @@ func NewMyVideoLogic(ctx context.Context, svcCtx *svc.ServiceContext) *MyVideoLo
 func (l *MyVideoLogic) MyVideo() (resp *types.VideoListRsp, err error) {
 	user, ok := auth.GetUserFromContext(l.ctx)
 	if !ok || user == nil {
-		return &types.VideoListRsp{Status: 401, Msg: "用户未登录"}, errors.New("用户未登录")
+		return nil, errors.New("用户未登录")
 	}
 
 	videos, err := l.svcCtx.VideoRepo.FindByUserID(l.ctx, user.ID)
 	if err != nil {
-		return &types.VideoListRsp{Status: 500, Msg: "查找失败"}, errors.New("查找失败")
+		return nil, errors.New("查找失败")
 	}
 
 	return serializer.VideoListRspFromModels(videos), nil

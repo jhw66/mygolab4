@@ -33,9 +33,10 @@ func NewCommentListLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Comme
 	}
 }
 
+// 不传 comment_id 查根评论；传 comment_id 时先确认它是根评论，再查它下面的所有回复，平铺返回
 func (l *CommentListLogic) CommentList(req *types.CommentListReq) (resp *types.CommentListRsp, err error) {
 	if _, err := l.svcCtx.VideoRepo.FindByID(l.ctx, req.Vid); err != nil {
-		return &types.CommentListRsp{Status: 404, Msg: "未找到该视频"}, errors.New("未找到该视频")
+		return nil, errors.New("未找到该视频")
 	}
 
 	page := req.Page
@@ -47,13 +48,6 @@ func (l *CommentListLogic) CommentList(req *types.CommentListReq) (resp *types.C
 		pageSize = 10
 	}
 
-	if req.CommentId != "" {
-		rootComment, err := l.svcCtx.CommentRepo.FindByIDAndVideo(l.ctx, req.CommentId, req.Vid)
-		if err != nil || rootComment.CommentID != nil {
-			return &types.CommentListRsp{Status: 404, Msg: "根评论不存在"}, errors.New("根评论不存在")
-		}
-	}
-
 	if cachedComments, err := l.svcCtx.CommentCache.GetList(l.ctx, req.Vid, req.CommentId, page, pageSize); err == nil {
 		var data cachemodel.CommentListCacheData
 		if err := json.Unmarshal([]byte(cachedComments), &data); err == nil {
@@ -62,14 +56,18 @@ func (l *CommentListLogic) CommentList(req *types.CommentListReq) (resp *types.C
 	}
 
 	var comments []model.Comment
-	var total int64
+	var total int64 = 0
 	if req.CommentId == "" {
 		comments, err = l.svcCtx.CommentRepo.ListRootByVideoID(l.ctx, req.Vid, page, pageSize)
 	} else {
+		rootComment, err := l.svcCtx.CommentRepo.FindByIDAndVideoUnscoped(l.ctx, req.CommentId, req.Vid)
+		if err != nil || rootComment.CommentID != nil {
+			return nil, errors.New("根评论不存在")
+		}
 		comments, err = l.svcCtx.CommentRepo.ListRepliesByRootID(l.ctx, req.Vid, req.CommentId, page, pageSize)
 	}
 	if err != nil {
-		return &types.CommentListRsp{Status: 500, Msg: "查询评论失败"}, errors.New("查询评论失败")
+		return nil, errors.New("查询评论失败")
 	}
 
 	if err := core.WarmUpCommentCount(l.ctx, l.svcCtx.CommentCache, l.svcCtx.VideoRepo, req.Vid); err != nil {
@@ -82,7 +80,7 @@ func (l *CommentListLogic) CommentList(req *types.CommentListReq) (resp *types.C
 		total, err = l.svcCtx.CommentRepo.CountRepliesByRootID(l.ctx, req.Vid, req.CommentId)
 	}
 	if err != nil {
-		return &types.CommentListRsp{Status: 500, Msg: "查询评论数量失败"}, errors.New("查询评论数量失败")
+		l.Errorf("Query comment count failed, vid=%s, err=%v", req.Vid, err)
 	}
 
 	cacheData := cachemodel.CommentListCacheData{
@@ -90,7 +88,9 @@ func (l *CommentListLogic) CommentList(req *types.CommentListReq) (resp *types.C
 		Total:    total,
 	}
 	if payload, err := json.Marshal(cacheData); err == nil {
-		_ = l.svcCtx.CommentCache.SetList(l.ctx, req.Vid, req.CommentId, page, pageSize, payload, 30*time.Second)
+		if err := l.svcCtx.CommentCache.SetList(l.ctx, req.Vid, req.CommentId, page, pageSize, payload, 30*time.Second); err != nil {
+			l.Errorf("failed to set comment list in cache, vid=%s, err=%v", req.Vid, err)
+		}
 	}
 	return serializer.CommentListRspFromModels(comments, total, page, pageSize), nil
 }

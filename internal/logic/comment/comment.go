@@ -31,17 +31,18 @@ func NewCommentLogic(ctx context.Context, svcCtx *svc.ServiceContext) *CommentLo
 	}
 }
 
+// 如果带了 comment_id，再查父评论并计算 root_id；最后创建评论并更新视频评论数缓存和热榜。
 func (l *CommentLogic) Comment(req *types.CommentAddReq) (resp *types.CommonRsp, err error) {
 	if err := utils.ValidateRuneLength(req.Content, 1, 50); err != nil {
-		return &types.CommonRsp{Status: 400, Msg: err.Error()}, err
+		return nil, err
 	}
 
 	user, ok := auth.GetUserFromContext(l.ctx)
 	if !ok || user == nil {
-		return &types.CommonRsp{Status: 401, Msg: "用户未登录"}, errors.New("用户未登录")
+		return nil, errors.New("用户未登录")
 	}
 	if _, err := l.svcCtx.VideoRepo.FindByID(l.ctx, req.Vid); err != nil {
-		return &types.CommonRsp{Status: 404, Msg: "未找到该视频"}, errors.New("未找到该视频")
+		return nil, errors.New("未找到该视频")
 	}
 
 	var commentID *string
@@ -49,7 +50,7 @@ func (l *CommentLogic) Comment(req *types.CommentAddReq) (resp *types.CommonRsp,
 	if req.CommentId != "" {
 		parent, err := l.svcCtx.CommentRepo.FindByIDAndVideo(l.ctx, req.CommentId, req.Vid)
 		if err != nil {
-			return &types.CommonRsp{Status: 404, Msg: "父评论不存在"}, errors.New("父评论不存在")
+			return nil, errors.New("父评论不存在")
 		}
 		commentID = &parent.ID
 		if parent.RootID != nil {
@@ -70,7 +71,7 @@ func (l *CommentLogic) Comment(req *types.CommentAddReq) (resp *types.CommonRsp,
 		RootID:    rootID,
 		Content:   req.Content,
 	}); err != nil {
-		return &types.CommonRsp{Status: 500, Msg: "评论保存失败"}, errors.New("评论保存失败")
+		return nil, errors.New("评论保存失败")
 	}
 
 	if err := l.svcCtx.CommentCache.IncrCount(l.ctx, req.Vid); err != nil {

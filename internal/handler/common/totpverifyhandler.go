@@ -17,7 +17,7 @@ func TotpVerifyHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req types.TotpVerifyReq
 		if err := httpx.Parse(r, &req); err != nil {
-			httpx.WriteJsonCtx(r.Context(), w, 200, types.CommonRsp{
+			httpx.WriteJsonCtx(r.Context(), w, 200, &types.CommonRsp{
 				Status: 400,
 				Msg:    "请求参数错误",
 				Error:  err.Error(),
@@ -27,7 +27,7 @@ func TotpVerifyHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 
 		challengeToken, err := auth.GetTokenFromHeader(r)
 		if err != nil {
-			httpx.WriteJsonCtx(r.Context(), w, 200, types.CommonRsp{
+			httpx.WriteJsonCtx(r.Context(), w, 200, &types.CommonRsp{
 				Status: 400,
 				Msg:    "未传challengeToken",
 				Error:  err.Error(),
@@ -38,7 +38,7 @@ func TotpVerifyHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 		l := common.NewTotpVerifyLogic(r.Context(), svcCtx)
 		resp, err := l.TotpVerify(&req, challengeToken)
 		if err != nil {
-			httpx.WriteJsonCtx(r.Context(), w, 200, types.CommonRsp{
+			httpx.WriteJsonCtx(r.Context(), w, 200, &types.CommonRsp{
 				Status: 400,
 				Msg:    "验证2FA失败",
 				Error:  err.Error(),

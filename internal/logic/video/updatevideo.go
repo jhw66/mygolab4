@@ -34,27 +34,27 @@ func NewUpdateVideoLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Updat
 func (l *UpdateVideoLogic) UpdateVideo(req *types.VideoIdReq, r *http.Request) (resp *types.VideoRsp, err error) {
 	user, ok := auth.GetUserFromContext(l.ctx)
 	if !ok || user == nil {
-		return &types.VideoRsp{Status: 401, Msg: "用户未登录"}, errors.New("用户未登录")
+		return nil, errors.New("用户未登录")
 	}
 	if req.Id == "" {
-		return &types.VideoRsp{Status: 400, Msg: "请传入视频id"}, errors.New("请传入视频id")
+		return nil, errors.New("请传入视频id")
 	}
 
 	video, err := l.svcCtx.VideoRepo.FindByID(l.ctx, req.Id)
 	if err != nil {
-		return &types.VideoRsp{Status: 404, Msg: "未找到该视频"}, errors.New("未找到该视频")
+		return nil, errors.New("未找到该视频")
 	}
 	if video.UserID != user.ID {
-		return &types.VideoRsp{Status: 403, Msg: "没有修改视频权限或者不存在该视频"}, errors.New("没有修改视频权限或者不存在该视频")
+		return nil, errors.New("没有修改视频权限或者不存在该视频")
 	}
 
 	if err = utils.ParseMultipartForm(r, 64<<20); err != nil {
-		return &types.VideoRsp{Status: 400, Msg: "请求格式错误"}, errors.New("请求格式错误")
+		return nil, errors.New("请求格式错误")
 	}
 
 	if title, exists := utils.GetFormValue(r, "title"); exists {
 		if title == "" {
-			return &types.VideoRsp{Status: 400, Msg: "标题不能为空"}, errors.New("标题不能为空")
+			return nil, errors.New("标题不能为空")
 		}
 		video.Title = title
 	}
@@ -74,7 +74,7 @@ func (l *UpdateVideoLogic) UpdateVideo(req *types.VideoIdReq, r *http.Request) (
 		var newVideoWebPath string
 		newVideoDiskPath, newVideoWebPath, cleanupOldVideo, err = utils.ReplaceStoredFile("static/video", "video", user.ID, videoFile, oldVideoURL)
 		if err != nil {
-			return &types.VideoRsp{Status: 500, Msg: "保存视频文件失败"}, errors.New("保存视频文件失败")
+			return nil, errors.New("保存视频文件失败")
 		}
 		video.URL = newVideoWebPath
 	}
@@ -84,26 +84,38 @@ func (l *UpdateVideoLogic) UpdateVideo(req *types.VideoIdReq, r *http.Request) (
 		var newCoverWebPath string
 		newCoverDiskPath, newCoverWebPath, cleanupOldCover, err = utils.ReplaceStoredFile("static/cover", "cover", user.ID, coverFile, oldCoverURL)
 		if err != nil {
-			_ = utils.RemoveIfExists(newVideoDiskPath)
-			return &types.VideoRsp{Status: 500, Msg: "保存封面文件失败"}, err
+			if err := utils.RemoveIfExists(newVideoDiskPath); err != nil {
+				l.Errorf("failed to remove new video file after cover upload failure, path=%s, err=%v", newVideoDiskPath, err)
+			}
+			return nil, errors.New("保存封面文件失败")
 		}
 		video.Cover = newCoverWebPath
 	}
 
 	err = l.svcCtx.VideoRepo.Update(l.ctx, video)
 	if err != nil {
-		_ = utils.RemoveIfExists(newVideoDiskPath)
-		_ = utils.RemoveIfExists(newCoverDiskPath)
-		return &types.VideoRsp{Status: 500, Msg: "更新视频失败"}, errors.New("更新视频失败")
+		if err := utils.RemoveIfExists(newVideoDiskPath); err != nil {
+			l.Errorf("failed to remove new video file after update failure, path=%s, err=%v", newVideoDiskPath, err)
+		}
+		if err := utils.RemoveIfExists(newCoverDiskPath); err != nil {
+			l.Errorf("failed to remove new cover file after update failure, path=%s, err=%v", newCoverDiskPath, err)
+		}
+		return nil, errors.New("更新视频失败")
 	}
 	if cleanupOldVideo != nil {
-		_ = cleanupOldVideo()
+		if err := cleanupOldVideo(); err != nil {
+			l.Errorf("failed to cleanup old video file, err=%v", err)
+		}
 	}
 	if cleanupOldCover != nil {
-		_ = cleanupOldCover()
+		if err := cleanupOldCover(); err != nil {
+			l.Errorf("failed to cleanup old cover file, err=%v", err)
+		}
 	}
 
-	l.svcCtx.RankCache.ZAddScore(l.ctx, video.ID, float64(video.HotScore))
+	if err := l.svcCtx.RankCache.ZAddScore(l.ctx, video.ID, float64(video.HotScore)); err != nil {
+		l.Errorf("failed to add video to rank cache, videoID=%d, err=%v", video.ID, err)
+	}
 
 	return serializer.VideoRspFromModel(video), nil
 }

@@ -8,6 +8,7 @@ import (
 
 	"github.com/jhw66/myvideo_lab4/internal/logic/video"
 	"github.com/jhw66/myvideo_lab4/internal/svc"
+	"github.com/jhw66/myvideo_lab4/internal/types"
 	"github.com/zeromicro/go-zero/rest/httpx"
 )
 
@@ -16,7 +17,11 @@ func UploadVideoHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 		l := video.NewUploadVideoLogic(r.Context(), svcCtx)
 		resp, err := l.UploadVideo(r)
 		if err != nil {
-			httpx.WriteJsonCtx(r.Context(), w, 200, resp)
+			httpx.WriteJsonCtx(r.Context(), w, 200, &types.VideoRsp{
+				Status: 400,
+				Msg:    "上传视频失败",
+				Error:  err.Error(),
+			})
 			return
 		}
 		httpx.WriteJsonCtx(r.Context(), w, 200, resp)

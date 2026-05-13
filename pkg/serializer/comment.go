@@ -13,6 +13,7 @@ type Comment struct {
 	RootID        string `json:"root_id,omitempty"`
 	Content       string `json:"content"`
 	FavoriteCount uint   `json:"favorite_count"`
+	IsDeleted     bool   `json:"is_deleted"`
 	CreatedAt     int64  `json:"created_at"`
 	User          User   `json:"user"`
 }
@@ -27,14 +28,22 @@ type CommentList struct {
 func CommentListRspFromModels(comments []model.Comment, total int64, page int, pageSize int) *types.CommentListRsp {
 	items := make([]types.CommentItem, 0, len(comments))
 	for i := range comments {
+		content := comments[i].Content
+		favoriteCount := comments[i].FavoriteCount
+		isDeleted := comments[i].DeletedAt.Valid
+		if isDeleted {
+			content = "该评论已删除"
+			favoriteCount = 0
+		}
 		items = append(items, types.CommentItem{
 			Id:            comments[i].ID,
 			UserId:        comments[i].UserID,
 			VideoId:       comments[i].VideoID,
 			CommentId:     stringValue(comments[i].CommentID),
 			RootId:        stringValue(comments[i].RootID),
-			Content:       comments[i].Content,
-			FavoriteCount: comments[i].FavoriteCount,
+			Content:       content,
+			FavoriteCount: favoriteCount,
+			IsDeleted:     isDeleted,
 			CreatedAt:     comments[i].CreatedAt.Unix(),
 			User:          UserItemFromModel(&comments[i].User),
 		})
