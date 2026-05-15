@@ -6,7 +6,9 @@ import (
 
 	"github.com/jhw66/myvideo_lab4/internal/svc"
 	"github.com/jhw66/myvideo_lab4/pkg/cache/cacherepo"
-	"github.com/jhw66/myvideo_lab4/pkg/db/repository/video"
+	"github.com/jhw66/myvideo_lab4/pkg/db/repository/comment"
+	"github.com/jhw66/myvideo_lab4/pkg/db/repository/commentfavorite"
+	"github.com/jhw66/myvideo_lab4/pkg/db/repository/favorite"
 	"github.com/redis/go-redis/v9"
 	"github.com/zeromicro/go-zero/core/logx"
 )
@@ -27,10 +29,10 @@ func CalculateHotScore(favoriteCount, commentCount uint) uint {
 }
 
 func UpdateRankScore(ctx context.Context, svcCtx *svc.ServiceContext, vid string) error {
-	if err := WarmUpFavoriteCount(ctx, svcCtx.FavoriteCache, svcCtx.VideoRepo, vid); err != nil {
+	if err := WarmUpFavoriteCount(ctx, svcCtx.FavoriteCache, svcCtx.FavoriteRepo, vid); err != nil {
 		logx.WithContext(ctx).Errorf("warmup favorite count failed, vid=%s, err=%v", vid, err)
 	}
-	if err := WarmUpCommentCount(ctx, svcCtx.CommentCache, svcCtx.VideoRepo, vid); err != nil {
+	if err := WarmUpCommentCount(ctx, svcCtx.CommentCache, svcCtx.CommentRepo, vid); err != nil {
 		logx.WithContext(ctx).Errorf("warmup comment count failed, vid=%s, err=%v", vid, err)
 	}
 
@@ -88,11 +90,11 @@ func SyncDirtyVideoStats(ctx context.Context, svcCtx *svc.ServiceContext, batchS
 
 	success := make([]interface{}, 0, len(dirtyVids))
 	for _, vid := range dirtyVids {
-		if err := WarmUpFavoriteCount(ctx, svcCtx.FavoriteCache, svcCtx.VideoRepo, vid); err != nil {
+		if err := WarmUpFavoriteCount(ctx, svcCtx.FavoriteCache, svcCtx.FavoriteRepo, vid); err != nil {
 			logx.WithContext(ctx).Errorf("sync warmup favorite failed, vid=%s, err=%v", vid, err)
 			continue
 		}
-		if err := WarmUpCommentCount(ctx, svcCtx.CommentCache, svcCtx.VideoRepo, vid); err != nil {
+		if err := WarmUpCommentCount(ctx, svcCtx.CommentCache, svcCtx.CommentRepo, vid); err != nil {
 			logx.WithContext(ctx).Errorf("sync warmup comment failed, vid=%s, err=%v", vid, err)
 			continue
 		}
@@ -121,10 +123,7 @@ func SyncDirtyVideoStats(ctx context.Context, svcCtx *svc.ServiceContext, batchS
 		success = append(success, vid)
 	}
 
-	if err := svcCtx.RankCache.RemoveDirtyBatch(ctx, success); err != nil {
-		return err
-	}
-	return nil
+	return svcCtx.RankCache.RemoveDirtyBatch(ctx, success)
 }
 
 func StartVideoStatSync(ctx context.Context, svcCtx *svc.ServiceContext, interval time.Duration, batchSize int) {
@@ -150,30 +149,67 @@ func StartVideoStatSync(ctx context.Context, svcCtx *svc.ServiceContext, interva
 	}
 }
 
-// 预热点赞数缓存
-func WarmUpFavoriteCount(ctx context.Context, cc cacherepo.FavoriteCache, videoRepo video.VideoRepository, vid string) error {
-	exists, _ := cc.ExistsCount(ctx, vid)
-	if exists {
-		return nil
-	}
-	if !cc.TryWarmupLock(ctx, vid, 5*time.Second) {
-		time.Sleep(100 * time.Millisecond)
-		return nil
-	}
-	exists, _ = cc.ExistsCount(ctx, vid)
-	if exists {
-		return nil
+func SyncDirtyCommentFavoriteStats(ctx context.Context, svcCtx *svc.ServiceContext, batchSize int) error {
+	if batchSize <= 0 {
+		batchSize = DefaultSyncBatchSize
 	}
 
-	video, err := videoRepo.FindByID(ctx, vid)
+	dirtyCommentIDs, err := svcCtx.FavoriteCache.ListDirtyCommentFavoriteCount(ctx)
 	if err != nil {
 		return err
 	}
-	return cc.SetCount(ctx, vid, video.FavoriteCount, favoriteCountTTL)
+	if len(dirtyCommentIDs) == 0 {
+		return nil
+	}
+	if len(dirtyCommentIDs) > batchSize {
+		dirtyCommentIDs = dirtyCommentIDs[:batchSize]
+	}
+
+	success := make([]interface{}, 0, len(dirtyCommentIDs))
+	for _, commentID := range dirtyCommentIDs {
+		if err := WarmUpCommentFavoriteCount(ctx, svcCtx.FavoriteCache, svcCtx.CommentFavoriteRepo, commentID); err != nil {
+			logx.WithContext(ctx).Errorf("sync warmup comment favorite failed, cid=%s, err=%v", commentID, err)
+			continue
+		}
+		favoriteCount, err := svcCtx.FavoriteCache.GetCommentFavoriteCount(ctx, commentID)
+		if err != nil {
+			logx.WithContext(ctx).Errorf("sync get comment favorite cache failed, cid=%s, err=%v", commentID, err)
+			continue
+		}
+		if err := svcCtx.CommentRepo.UpdateFavoriteCountByID(ctx, commentID, favoriteCount); err != nil {
+			logx.WithContext(ctx).Errorf("sync update comment favorite count failed, cid=%s, err=%v", commentID, err)
+			continue
+		}
+		success = append(success, commentID)
+	}
+
+	return svcCtx.FavoriteCache.RemoveDirtyCommentFavoriteCountBatch(ctx, success)
 }
 
-// 预热评论数缓存
-func WarmUpCommentCount(ctx context.Context, cc cacherepo.CommentCache, videoRepo video.VideoRepository, vid string) error {
+func StartCommentFavoriteStatSync(ctx context.Context, svcCtx *svc.ServiceContext, interval time.Duration, batchSize int) {
+	if interval <= 0 {
+		interval = DefaultSyncInterval
+	}
+	if batchSize <= 0 {
+		batchSize = DefaultSyncBatchSize
+	}
+
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			if err := SyncDirtyCommentFavoriteStats(ctx, svcCtx, batchSize); err != nil {
+				logx.WithContext(ctx).Errorf("sync dirty comment favorite stats failed, err=%v", err)
+			}
+		}
+	}
+}
+
+func WarmUpFavoriteCount(ctx context.Context, cc cacherepo.FavoriteCache, favoriteRepo favorite.FavoriteRepository, vid string) error {
 	exists, _ := cc.ExistsCount(ctx, vid)
 	if exists {
 		return nil
@@ -182,15 +218,95 @@ func WarmUpCommentCount(ctx context.Context, cc cacherepo.CommentCache, videoRep
 		time.Sleep(100 * time.Millisecond)
 		return nil
 	}
-
 	exists, _ = cc.ExistsCount(ctx, vid)
 	if exists {
 		return nil
 	}
-	video, err := videoRepo.FindByID(ctx, vid)
+
+	count, err := favoriteRepo.CountByVideoID(ctx, vid)
 	if err != nil {
 		return err
 	}
+	return cc.SetCount(ctx, vid, count, favoriteCountTTL)
+}
 
-	return cc.SetCount(ctx, vid, video.CommentCount, commentCountTTL)
+func WarmUpCommentCount(ctx context.Context, cc cacherepo.CommentCache, commentRepo comment.CommentRepository, vid string) error {
+	exists, _ := cc.ExistsCount(ctx, vid)
+	if exists {
+		return nil
+	}
+	if !cc.TryWarmupLock(ctx, "comment_count:"+vid, 5*time.Second) {
+		time.Sleep(100 * time.Millisecond)
+		return nil
+	}
+	exists, _ = cc.ExistsCount(ctx, vid)
+	if exists {
+		return nil
+	}
+
+	count, err := commentRepo.CountByVideoID(ctx, vid)
+	if err != nil {
+		return err
+	}
+	return cc.SetCount(ctx, vid, count, commentCountTTL)
+}
+
+func WarmUpRootCommentCount(ctx context.Context, cc cacherepo.CommentCache, commentRepo comment.CommentRepository, vid string) error {
+	exists, _ := cc.ExistsRootCount(ctx, vid)
+	if exists {
+		return nil
+	}
+	if !cc.TryWarmupLock(ctx, "comment_root_count:"+vid, 5*time.Second) {
+		time.Sleep(100 * time.Millisecond)
+		return nil
+	}
+	exists, _ = cc.ExistsRootCount(ctx, vid)
+	if exists {
+		return nil
+	}
+	count, err := commentRepo.CountRootByVideoID(ctx, vid)
+	if err != nil {
+		return err
+	}
+	return cc.SetRootCount(ctx, vid, count, commentCountTTL)
+}
+
+func WarmUpReplyCommentCount(ctx context.Context, cc cacherepo.CommentCache, commentRepo comment.CommentRepository, vid string, rootID string) error {
+	exists, _ := cc.ExistsReplyCount(ctx, rootID)
+	if exists {
+		return nil
+	}
+	if !cc.TryWarmupLock(ctx, "comment_reply_count:"+rootID, 5*time.Second) {
+		time.Sleep(100 * time.Millisecond)
+		return nil
+	}
+	exists, _ = cc.ExistsReplyCount(ctx, rootID)
+	if exists {
+		return nil
+	}
+	count, err := commentRepo.CountRepliesByRootID(ctx, vid, rootID)
+	if err != nil {
+		return err
+	}
+	return cc.SetReplyCount(ctx, rootID, count, commentCountTTL)
+}
+
+func WarmUpCommentFavoriteCount(ctx context.Context, cc cacherepo.FavoriteCache, commentFavoriteRepo commentfavorite.CommentFavoriteRepository, commentID string) error {
+	exists, _ := cc.ExistsCommentFavoriteCount(ctx, commentID)
+	if exists {
+		return nil
+	}
+	if !cc.TryCommentFavoriteWarmupLock(ctx, commentID, 5*time.Second) {
+		time.Sleep(100 * time.Millisecond)
+		return nil
+	}
+	exists, _ = cc.ExistsCommentFavoriteCount(ctx, commentID)
+	if exists {
+		return nil
+	}
+	count, err := commentFavoriteRepo.CountByCommentID(ctx, commentID)
+	if err != nil {
+		return err
+	}
+	return cc.SetCommentFavoriteCount(ctx, commentID, count, commentCountTTL)
 }

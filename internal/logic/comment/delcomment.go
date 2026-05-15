@@ -7,7 +7,6 @@ import (
 	"context"
 	"errors"
 
-	"github.com/jhw66/myvideo_lab4/internal/logic/core"
 	"github.com/jhw66/myvideo_lab4/internal/svc"
 	"github.com/jhw66/myvideo_lab4/internal/types"
 	"github.com/jhw66/myvideo_lab4/pkg/auth"
@@ -33,56 +32,47 @@ func NewDelCommentLogic(ctx context.Context, svcCtx *svc.ServiceContext) *DelCom
 func (l *DelCommentLogic) DelComment(req *types.DelCommentReq) (resp *types.CommonRsp, err error) {
 	user, ok := auth.GetUserFromContext(l.ctx)
 	if !ok || user == nil {
-		return &types.CommonRsp{Status: 401, Msg: "用户未登录"}, errors.New("用户未登录")
+		return nil, errors.New("用户未登录")
 	}
 
 	comment, err := l.svcCtx.CommentRepo.FindByIDAndVideo(l.ctx, req.Cid, req.Vid)
 	if err != nil {
-		return &types.CommonRsp{Status: 404, Msg: "该评论不存在"}, errors.New("该评论不存在")
+		return nil, errors.New("该评论不存在")
 	}
 	if comment.UserID != user.ID {
-		return &types.CommonRsp{Status: 403, Msg: "不能删除别人评论"}, errors.New("不能删除别人评论")
+		return nil, errors.New("不能删除别人评论")
 	}
 
-	if err := core.WarmUpCommentCount(l.ctx, l.svcCtx.CommentCache, l.svcCtx.VideoRepo, req.Vid); err != nil {
-		l.Errorf("warmup comment count failed, vid=%s, err=%v", req.Vid, err)
-	}
-
-	deletedCount := int64(1)
 	err = l.svcCtx.TransactionRepository.WithTransaction(l.ctx, func(tx *gorm.DB) error {
-		if comment.CommentID == nil {
-			replyCount, err := l.svcCtx.CommentRepo.CountRepliesByRootIDWithTx(l.ctx, tx, req.Vid, comment.ID)
-			if err != nil {
-				return err
-			}
-			deletedCount += replyCount
-			if err := l.svcCtx.CommentFavoriteRepo.DeleteByRootIDWithTx(l.ctx, tx, comment.ID); err != nil {
-				return err
-			}
-			if err := l.svcCtx.CommentRepo.DeleteByRootIDWithTx(l.ctx, tx, comment.ID); err != nil {
-				return err
-			}
-		}
 		if err := l.svcCtx.CommentFavoriteRepo.DeleteByCommentIDWithTx(l.ctx, tx, comment.ID); err != nil {
+			l.Errorf("delete comment favorite by comment id failed, cid=%s, err=%v", comment.ID, err)
 			return err
 		}
-		return l.svcCtx.CommentRepo.DeleteWithTx(l.ctx, tx, comment)
+		if err := l.svcCtx.CommentRepo.DeleteWithTx(l.ctx, tx, comment); err != nil {
+			l.Errorf("delete comment failed, cid=%s, err=%v", comment.ID, err)
+			return err
+		}
+		return nil
 	})
 	if err != nil {
-		return &types.CommonRsp{Status: 500, Msg: "删除评论失败"}, errors.New("删除评论失败")
+		return nil, errors.New("删除评论失败")
 	}
 
-	for i := int64(0); i < deletedCount; i++ {
-		if err := l.svcCtx.CommentCache.DecrCount(l.ctx, req.Vid); err != nil {
-			l.Errorf("decr comment count failed, vid=%s, err=%v", req.Vid, err)
-			break
+	if comment.RootID == nil {
+		if err := l.svcCtx.CommentCache.InvalidateRootListByVideo(l.ctx, req.Vid); err != nil {
+			l.Errorf("invalidate root comment list cache failed, vid=%s, err=%v", req.Vid, err)
+		}
+		if err := l.svcCtx.CommentCache.InvalidateReplyListByRoot(l.ctx, req.Vid, comment.ID); err != nil {
+			l.Errorf("invalidate reply comment list cache failed, root_id=%s, err=%v", comment.ID, err)
+		}
+	} else {
+		if err := l.svcCtx.CommentCache.InvalidateReplyListByRoot(l.ctx, req.Vid, *comment.RootID); err != nil {
+			l.Errorf("invalidate reply comment list cache failed, root_id=%s, err=%v", *comment.RootID, err)
 		}
 	}
-	if err := core.UpdateRankScore(l.ctx, l.svcCtx, req.Vid); err != nil {
-		l.Errorf("update rank score failed, vid=%s, err=%v", req.Vid, err)
+	if err := l.svcCtx.FavoriteCache.DelCommentFavoriteCount(l.ctx, comment.ID); err != nil {
+		l.Errorf("delete comment favorite count failed, cid=%s, err=%v", comment.ID, err)
 	}
-	if err := l.svcCtx.CommentCache.InvalidateListByVideo(l.ctx, req.Vid); err != nil {
-		l.Errorf("invalidate comment list cache failed, vid=%s, err=%v", req.Vid, err)
-	}
+
 	return &types.CommonRsp{Status: 200, Msg: "删除评论成功"}, nil
 }

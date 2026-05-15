@@ -5,6 +5,7 @@ package user
 
 import (
 	"context"
+	"errors"
 
 	"github.com/jhw66/myvideo_lab4/internal/svc"
 	"github.com/jhw66/myvideo_lab4/internal/types"
@@ -31,10 +32,7 @@ func NewUserMeLogic(ctx context.Context, svcCtx *svc.ServiceContext) *UserMeLogi
 func (l *UserMeLogic) UserMe() (resp *types.UserRsp, err error) {
 	user, ok := auth.GetUserFromContext(l.ctx)
 	if !ok || user == nil {
-		return &types.UserRsp{
-			Status: 404,
-			Msg:    "资源不存在",
-		}, nil
+		return nil, errors.New("未登录")
 	}
 	return serializer.UserRspFromModel(user), nil
 }

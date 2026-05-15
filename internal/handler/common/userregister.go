@@ -16,7 +16,7 @@ func UserRegisterHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req types.UserRegisterReq
 		if err := httpx.Parse(r, &req); err != nil {
-			httpx.WriteJsonCtx(r.Context(), w, 200, &types.UserRegisterResp{
+			httpx.WriteJsonCtx(r.Context(), w, 200, &types.CommonRsp{
 				Status: 400,
 				Msg:    "请求参数错误",
 				Error:  err.Error(),
@@ -27,7 +27,7 @@ func UserRegisterHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 		l := common.NewUserRegisterLogic(r.Context(), svcCtx)
 		resp, err := l.UserRegister(&req)
 		if err != nil {
-			httpx.WriteJsonCtx(r.Context(), w, 200, &types.UserRegisterResp{
+			httpx.WriteJsonCtx(r.Context(), w, 200, &types.CommonRsp{
 				Status: 400,
 				Msg:    "注册失败",
 				Error:  err.Error(),

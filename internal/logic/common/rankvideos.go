@@ -33,11 +33,11 @@ func NewRankVideosLogic(ctx context.Context, svcCtx *svc.ServiceContext) *RankVi
 func (l *RankVideosLogic) RankVideos() (resp *types.VideoListRsp, err error) {
 	vids, err := l.svcCtx.RankCache.GetTopVideoIDs(l.ctx, core.DefaultRankLimit)
 	if err != nil || len(vids) == 0 {
-		return &types.VideoListRsp{Status: 500, Msg: "获取热门排行榜失败"}, errors.New("获取热门排行榜失败")
+		return nil, errors.New("获取热门排行榜失败")
 	}
 	videos, err := l.svcCtx.VideoRepo.FindByIDs(l.ctx, vids)
 	if err != nil {
-		return &types.VideoListRsp{Status: 500, Msg: "获取热门排行榜失败"}, errors.New("获取热门排行榜失败")
+		return nil, errors.New("获取热门排行榜失败")
 	}
 
 	ordered := orderVideos(vids, videos)

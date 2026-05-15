@@ -5,7 +5,7 @@ package types
 
 type CommentAddReq struct {
 	Vid       string `path:"vid"`
-	CommentId string `json:"comment_id,optional"`
+	CommentId string `form:"comment_id,optional"`
 	Content   string `json:"content"`
 }
 
@@ -17,6 +17,7 @@ type CommentItem struct {
 	RootId        string   `json:"root_id,omitempty"`
 	Content       string   `json:"content"`
 	FavoriteCount uint     `json:"favorite_count"`
+	IsDeleted     bool     `json:"is_deleted"`
 	CreatedAt     int64    `json:"created_at"`
 	User          UserItem `json:"user"`
 }
@@ -71,7 +72,7 @@ type Disable2FAResp struct {
 
 type FavoriteReq struct {
 	Vid       string `path:"vid"`
-	CommentId string `json:"comment_id,optional"`
+	CommentId string `form:"comment_id,optional"`
 }
 
 type LoginItem struct {

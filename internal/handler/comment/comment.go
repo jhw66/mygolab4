@@ -27,7 +27,11 @@ func CommentHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 		l := comment.NewCommentLogic(r.Context(), svcCtx)
 		resp, err := l.Comment(&req)
 		if err != nil {
-			httpx.WriteJsonCtx(r.Context(), w, 200, resp)
+			httpx.WriteJsonCtx(r.Context(), w, 200, &types.CommonRsp{
+				Status: 400,
+				Msg:    "评论失败",
+				Error:  err.Error(),
+			})
 			return
 		}
 		httpx.WriteJsonCtx(r.Context(), w, 200, resp)

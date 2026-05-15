@@ -33,15 +33,15 @@ func NewCommentLogic(ctx context.Context, svcCtx *svc.ServiceContext) *CommentLo
 
 func (l *CommentLogic) Comment(req *types.CommentAddReq) (resp *types.CommonRsp, err error) {
 	if err := utils.ValidateRuneLength(req.Content, 1, 50); err != nil {
-		return &types.CommonRsp{Status: 400, Msg: err.Error()}, err
+		return nil, err
 	}
 
 	user, ok := auth.GetUserFromContext(l.ctx)
 	if !ok || user == nil {
-		return &types.CommonRsp{Status: 401, Msg: "用户未登录"}, errors.New("用户未登录")
+		return nil, errors.New("用户未登录")
 	}
 	if _, err := l.svcCtx.VideoRepo.FindByID(l.ctx, req.Vid); err != nil {
-		return &types.CommonRsp{Status: 404, Msg: "未找到该视频"}, errors.New("未找到该视频")
+		return nil, errors.New("未找到该视频")
 	}
 
 	var commentID *string
@@ -49,7 +49,7 @@ func (l *CommentLogic) Comment(req *types.CommentAddReq) (resp *types.CommonRsp,
 	if req.CommentId != "" {
 		parent, err := l.svcCtx.CommentRepo.FindByIDAndVideo(l.ctx, req.CommentId, req.Vid)
 		if err != nil {
-			return &types.CommonRsp{Status: 404, Msg: "父评论不存在"}, errors.New("父评论不存在")
+			return nil, errors.New("父评论不存在")
 		}
 		commentID = &parent.ID
 		if parent.RootID != nil {
@@ -59,8 +59,17 @@ func (l *CommentLogic) Comment(req *types.CommentAddReq) (resp *types.CommonRsp,
 		}
 	}
 
-	if err := core.WarmUpCommentCount(l.ctx, l.svcCtx.CommentCache, l.svcCtx.VideoRepo, req.Vid); err != nil {
+	if err := core.WarmUpCommentCount(l.ctx, l.svcCtx.CommentCache, l.svcCtx.CommentRepo, req.Vid); err != nil {
 		l.Errorf("warmup comment count failed, vid=%s, err=%v", req.Vid, err)
+	}
+	if rootID == nil {
+		if err := core.WarmUpRootCommentCount(l.ctx, l.svcCtx.CommentCache, l.svcCtx.CommentRepo, req.Vid); err != nil {
+			l.Errorf("warmup root comment count failed, vid=%s, err=%v", req.Vid, err)
+		}
+	} else {
+		if err := core.WarmUpReplyCommentCount(l.ctx, l.svcCtx.CommentCache, l.svcCtx.CommentRepo, req.Vid, *rootID); err != nil {
+			l.Errorf("warmup reply comment count failed, root_id=%s, err=%v", *rootID, err)
+		}
 	}
 
 	if err = l.svcCtx.CommentRepo.Create(l.ctx, &model.Comment{
@@ -70,17 +79,31 @@ func (l *CommentLogic) Comment(req *types.CommentAddReq) (resp *types.CommonRsp,
 		RootID:    rootID,
 		Content:   req.Content,
 	}); err != nil {
-		return &types.CommonRsp{Status: 500, Msg: "评论保存失败"}, errors.New("评论保存失败")
+		return nil, errors.New("评论保存失败")
 	}
 
 	if err := l.svcCtx.CommentCache.IncrCount(l.ctx, req.Vid); err != nil {
 		l.Errorf("incr comment count failed, vid=%s, err=%v", req.Vid, err)
 	}
+
+	if rootID == nil {
+		if err := l.svcCtx.CommentCache.IncrRootCount(l.ctx, req.Vid); err != nil {
+			l.Errorf("incr root comment count failed, vid=%s, err=%v", req.Vid, err)
+		}
+		if err := l.svcCtx.CommentCache.InvalidateRootListByVideo(l.ctx, req.Vid); err != nil {
+			l.Errorf("invalidate root comment list cache failed, vid=%s, err=%v", req.Vid, err)
+		}
+	} else {
+		if err := l.svcCtx.CommentCache.IncrReplyCount(l.ctx, *rootID); err != nil {
+			l.Errorf("incr reply comment count failed, root_id=%s, err=%v", *rootID, err)
+		}
+		if err := l.svcCtx.CommentCache.InvalidateReplyListByRoot(l.ctx, req.Vid, *rootID); err != nil {
+			l.Errorf("invalidate reply comment list cache failed, root_id=%s, err=%v", *rootID, err)
+		}
+	}
+
 	if err := core.UpdateRankScore(l.ctx, l.svcCtx, req.Vid); err != nil {
 		l.Errorf("update rank score failed, vid=%s, err=%v", req.Vid, err)
-	}
-	if err := l.svcCtx.CommentCache.InvalidateListByVideo(l.ctx, req.Vid); err != nil {
-		l.Errorf("invalidate comment list cache failed, vid=%s, err=%v", req.Vid, err)
 	}
 
 	return &types.CommonRsp{Status: 200, Msg: "评论成功"}, nil

@@ -27,7 +27,11 @@ func DelCommentHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 		l := comment.NewDelCommentLogic(r.Context(), svcCtx)
 		resp, err := l.DelComment(&req)
 		if err != nil {
-			httpx.WriteJsonCtx(r.Context(), w, 200, resp)
+			httpx.WriteJsonCtx(r.Context(), w, 200, &types.CommonRsp{
+				Status: 500,
+				Msg:    "删除评论失败",
+				Error:  err.Error(),
+			})
 			return
 		}
 		httpx.WriteJsonCtx(r.Context(), w, 200, resp)

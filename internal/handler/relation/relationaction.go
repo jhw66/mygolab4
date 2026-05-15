@@ -27,7 +27,11 @@ func RelationActionHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 		l := relation.NewRelationActionLogic(r.Context(), svcCtx)
 		resp, err := l.RelationAction(&req)
 		if err != nil {
-			httpx.WriteJsonCtx(r.Context(), w, 200, resp)
+			httpx.WriteJsonCtx(r.Context(), w, 200, &types.CommonRsp{
+				Status: 500,
+				Msg:    "处理请求失败",
+				Error:  err.Error(),
+			})
 			return
 		}
 		httpx.WriteJsonCtx(r.Context(), w, 200, resp)

@@ -32,11 +32,11 @@ func NewFavoriteListLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Favo
 func (l *FavoriteListLogic) FavoriteList() (resp *types.VideoListRsp, err error) {
 	user, ok := auth.GetUserFromContext(l.ctx)
 	if !ok || user == nil {
-		return &types.VideoListRsp{Status: 401, Msg: "用户未登录"}, errors.New("用户未登录")
+		return nil, errors.New("用户未登录")
 	}
 	videos, err := l.svcCtx.FavoriteRepo.ListVideosByUserID(l.ctx, user.ID)
 	if err != nil {
-		return &types.VideoListRsp{Status: 500, Msg: "查询失败"}, errors.New("查询失败")
+		return nil, errors.New("查询失败")
 	}
 	return serializer.VideoListRspFromModels(videos), nil
 }
