@@ -16,6 +16,7 @@ type FavoriteRepository interface {
 	DeleteByUserAndVideoWithTx(ctx context.Context, tx *gorm.DB, userID, videoID string) error
 	DeleteByVideoIDWithTx(ctx context.Context, tx *gorm.DB, videoID string) error
 	ListVideosByUserID(ctx context.Context, userID string) ([]model.Video, error)
+	CountByVideoID(ctx context.Context, videoID string) (int64, error)
 }
 
 type favoriteRepository struct {
@@ -75,4 +76,10 @@ func (r *favoriteRepository) ListVideosByUserID(ctx context.Context, userID stri
 	err := r.db.WithContext(ctx).Joins("JOIN favorite ON favorite.video_id = video.id").
 		Where("favorite.user_id = ?", userID).Find(&videos).Error
 	return videos, err
+}
+
+func (r *favoriteRepository) CountByVideoID(ctx context.Context, videoID string) (int64, error) {
+	var count int64
+	err := r.db.WithContext(ctx).Model(&model.Favorite{}).Where("video_id = ?", videoID).Count(&count).Error
+	return count, err
 }

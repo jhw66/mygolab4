@@ -10,7 +10,7 @@ import (
 
 type FavoriteCache interface {
 	ExistsCount(ctx context.Context, vid string) (bool, error)
-	SetCount(ctx context.Context, vid string, count uint, ttl time.Duration) error
+	SetCount(ctx context.Context, vid string, count int64, ttl time.Duration) error
 	GetCountUint64(ctx context.Context, vid string) (uint64, error)
 	IncrCount(ctx context.Context, vid string) error
 	DecrCount(ctx context.Context, vid string) error
@@ -39,7 +39,7 @@ func (c *favoriteCache) ExistsCount(ctx context.Context, vid string) (bool, erro
 	return exists > 0, err
 }
 
-func (c *favoriteCache) SetCount(ctx context.Context, vid string, count uint, ttl time.Duration) error {
+func (c *favoriteCache) SetCount(ctx context.Context, vid string, count int64, ttl time.Duration) error {
 	return c.rdb.Set(ctx, buildFavoriteCountKey(vid), count, ttl).Err()
 }
 

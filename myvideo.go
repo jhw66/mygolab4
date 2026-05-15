@@ -36,6 +36,7 @@ func main() {
 		logx.Errorf("warmup rank zset failed: %v", err)
 	}
 	go core.StartVideoStatSync(context.Background(), ctx, core.DefaultSyncInterval, core.DefaultSyncBatchSize)
+	go core.StartCommentFavoriteStatSync(context.Background(), ctx, core.DefaultSyncInterval, core.DefaultSyncBatchSize)
 
 	fmt.Printf("Starting server at %s:%d...\n", c.Host, c.Port)
 	server.Start()

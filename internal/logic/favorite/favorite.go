@@ -69,7 +69,7 @@ func (l *FavoriteLogic) favoriteVideo(req *types.FavoriteReq, userID string) (*t
 		return &types.CommonRsp{Status: 500, Msg: "点赞操作失败"}, errors.New("点赞操作失败")
 	}
 
-	if err := core.WarmUpFavoriteCount(l.ctx, l.svcCtx.FavoriteCache, l.svcCtx.VideoRepo, req.Vid); err != nil {
+	if err := core.WarmUpFavoriteCount(l.ctx, l.svcCtx.FavoriteCache, l.svcCtx.FavoriteRepo, req.Vid); err != nil {
 		l.Errorf("warmup favorite count failed, vid=%s, err=%v", req.Vid, err)
 	}
 
@@ -95,35 +95,55 @@ func (l *FavoriteLogic) favoriteVideo(req *types.FavoriteReq, userID string) (*t
 }
 
 func (l *FavoriteLogic) favoriteComment(req *types.FavoriteReq, userID string) (*types.CommonRsp, error) {
-	if _, err := l.svcCtx.CommentRepo.FindByIDAndVideo(l.ctx, req.CommentId, req.Vid); err != nil {
+	comment, err := l.svcCtx.CommentRepo.FindByIDAndVideo(l.ctx, req.CommentId, req.Vid)
+	if err != nil {
 		return &types.CommonRsp{Status: 404, Msg: "评论不存在"}, errors.New("评论不存在")
+	}
+	if err := core.WarmUpCommentFavoriteCount(l.ctx, l.svcCtx.CommentCache, l.svcCtx.CommentFavoriteRepo, req.CommentId); err != nil {
+		l.Errorf("warmup comment favorite count failed, cid=%s, err=%v", req.CommentId, err)
 	}
 
 	liked := false
-	err := l.svcCtx.TransactionRepository.WithTransaction(l.ctx, func(tx *gorm.DB) error {
+	err = l.svcCtx.TransactionRepository.WithTransaction(l.ctx, func(tx *gorm.DB) error {
 		_, err := l.svcCtx.CommentFavoriteRepo.FindByUserAndCommentWithTx(l.ctx, tx, userID, req.CommentId)
 		switch {
 		case err == nil:
 			liked = false
-			if err := l.svcCtx.CommentFavoriteRepo.DeleteByUserAndCommentWithTx(l.ctx, tx, userID, req.CommentId); err != nil {
-				return err
-			}
-			return l.svcCtx.CommentRepo.DecrementFavoriteCountWithTx(l.ctx, tx, req.CommentId)
+			return l.svcCtx.CommentFavoriteRepo.DeleteByUserAndCommentWithTx(l.ctx, tx, userID, req.CommentId)
 		case errors.Is(err, gorm.ErrRecordNotFound):
 			liked = true
-			if err := l.svcCtx.CommentFavoriteRepo.CreateWithTx(l.ctx, tx, &model.CommentFavorite{
+			return l.svcCtx.CommentFavoriteRepo.CreateWithTx(l.ctx, tx, &model.CommentFavorite{
 				UserID:    userID,
 				CommentID: req.CommentId,
-			}); err != nil {
-				return err
-			}
-			return l.svcCtx.CommentRepo.IncrementFavoriteCountWithTx(l.ctx, tx, req.CommentId)
+			})
 		default:
 			return err
 		}
 	})
 	if err != nil {
 		return &types.CommonRsp{Status: 500, Msg: "评论点赞操作失败"}, errors.New("评论点赞操作失败")
+	}
+
+	if liked {
+		if err := l.svcCtx.CommentCache.IncrFavoriteCount(l.ctx, req.CommentId); err != nil {
+			l.Errorf("incr comment favorite count failed, cid=%s, err=%v", req.CommentId, err)
+		}
+	} else {
+		if err := l.svcCtx.CommentCache.DecrFavoriteCount(l.ctx, req.CommentId); err != nil {
+			l.Errorf("decr comment favorite count failed, cid=%s, err=%v", req.CommentId, err)
+		}
+	}
+	if err := l.svcCtx.CommentCache.MarkDirtyFavoriteCount(l.ctx, req.CommentId); err != nil {
+		l.Errorf("mark dirty comment favorite count failed, cid=%s, err=%v", req.CommentId, err)
+	}
+	if comment.CommentID == nil {
+		if err := l.svcCtx.CommentCache.InvalidateRootListByVideo(l.ctx, req.Vid); err != nil {
+			l.Errorf("invalidate root comment list cache failed, vid=%s, err=%v", req.Vid, err)
+		}
+	} else if comment.RootID != nil {
+		if err := l.svcCtx.CommentCache.InvalidateReplyListByRoot(l.ctx, req.Vid, *comment.RootID); err != nil {
+			l.Errorf("invalidate reply comment list cache failed, root_id=%s, err=%v", *comment.RootID, err)
+		}
 	}
 
 	msg := "取消评论点赞成功"

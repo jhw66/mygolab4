@@ -42,6 +42,7 @@ func (l *DelCommentLogic) DelComment(req *types.DelCommentReq) (resp *types.Comm
 	if comment.UserID != user.ID {
 		return nil, errors.New("不能删除别人评论")
 	}
+
 	err = l.svcCtx.TransactionRepository.WithTransaction(l.ctx, func(tx *gorm.DB) error {
 		if err := l.svcCtx.CommentFavoriteRepo.DeleteByCommentIDWithTx(l.ctx, tx, comment.ID); err != nil {
 			l.Errorf("delete comment favorite by comment id failed, cid=%s, err=%v", comment.ID, err)
@@ -57,8 +58,21 @@ func (l *DelCommentLogic) DelComment(req *types.DelCommentReq) (resp *types.Comm
 		return nil, errors.New("删除评论失败")
 	}
 
-	if err := l.svcCtx.CommentCache.InvalidateListByVideo(l.ctx, req.Vid); err != nil {
-		l.Errorf("invalidate comment list cache failed, vid=%s, err=%v", req.Vid, err)
+	if comment.RootID == nil {
+		if err := l.svcCtx.CommentCache.InvalidateRootListByVideo(l.ctx, req.Vid); err != nil {
+			l.Errorf("invalidate root comment list cache failed, vid=%s, err=%v", req.Vid, err)
+		}
+		if err := l.svcCtx.CommentCache.InvalidateReplyListByRoot(l.ctx, req.Vid, comment.ID); err != nil {
+			l.Errorf("invalidate reply comment list cache failed, root_id=%s, err=%v", comment.ID, err)
+		}
+	} else {
+		if err := l.svcCtx.CommentCache.InvalidateReplyListByRoot(l.ctx, req.Vid, *comment.RootID); err != nil {
+			l.Errorf("invalidate reply comment list cache failed, root_id=%s, err=%v", *comment.RootID, err)
+		}
 	}
+	if err := l.svcCtx.CommentCache.DelFavoriteCount(l.ctx, comment.ID); err != nil {
+		l.Errorf("delete comment favorite count failed, cid=%s, err=%v", comment.ID, err)
+	}
+
 	return &types.CommonRsp{Status: 200, Msg: "删除评论成功"}, nil
 }

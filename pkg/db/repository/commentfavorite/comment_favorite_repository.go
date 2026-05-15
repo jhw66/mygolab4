@@ -18,6 +18,7 @@ type CommentFavoriteRepository interface {
 	DeleteByCommentIDWithTx(ctx context.Context, tx *gorm.DB, commentID string) error
 	DeleteByRootIDWithTx(ctx context.Context, tx *gorm.DB, rootID string) error
 	DeleteByVideoIDWithTx(ctx context.Context, tx *gorm.DB, videoID string) error
+	CountByCommentID(ctx context.Context, commentID string) (int64, error)
 }
 
 type commentFavoriteRepository struct {
@@ -86,4 +87,12 @@ func (r *commentFavoriteRepository) DeleteByVideoIDWithTx(ctx context.Context, t
 	return tx.WithContext(ctx).
 		Where("comment_id IN (?)", tx.Model(&model.Comment{}).Select("id").Where("video_id = ?", videoID)).
 		Delete(&model.CommentFavorite{}).Error
+}
+
+func (r *commentFavoriteRepository) CountByCommentID(ctx context.Context, commentID string) (int64, error) {
+	var count int64
+	err := r.db.WithContext(ctx).Model(&model.CommentFavorite{}).
+		Where("comment_id = ?", commentID).
+		Count(&count).Error
+	return count, err
 }

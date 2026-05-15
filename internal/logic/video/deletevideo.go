@@ -48,7 +48,6 @@ func (l *DeleteVideoLogic) DeleteVideo(req *types.VideoIdReq) (resp *types.Commo
 	}
 
 	err = l.svcCtx.TransactionRepository.WithTransaction(l.ctx, func(tx *gorm.DB) error {
-		// 删除视频的点赞
 		if err := l.svcCtx.FavoriteRepo.DeleteByVideoIDWithTx(l.ctx, tx, req.Id); err != nil {
 			l.Errorf("delete favorite by video failed, vid=%s, err=%v", req.Id, err)
 			return err
@@ -57,23 +56,19 @@ func (l *DeleteVideoLogic) DeleteVideo(req *types.VideoIdReq) (resp *types.Commo
 			l.Errorf("delete comment favorite by video failed, vid=%s, err=%v", req.Id, err)
 			return err
 		}
-		// 删除视频的评论
 		if err := l.svcCtx.CommentRepo.DeleteByVideoIDWithTx(l.ctx, tx, req.Id); err != nil {
 			l.Errorf("delete comment by video failed, vid=%s, err=%v", req.Id, err)
 			return err
 		}
-		// 删除视频
 		deleted, err := l.svcCtx.VideoRepo.DeleteByIDWithTx(l.ctx, tx, req.Id)
 		if err != nil {
 			l.Errorf("delete video failed, vid=%s, err=%v", req.Id, err)
 			return err
 		}
-		// 删除视频文件
 		if err := utils.RemoveIfExistsWithUrl(deleted.URL); err != nil {
 			l.Errorf("remove video file failed, url=%s, err=%v", deleted.URL, err)
 			return err
 		}
-		// 删除视频封面文件
 		if err := utils.RemoveIfExistsWithUrl(deleted.Cover); err != nil {
 			l.Errorf("remove video cover file failed, url=%s, err=%v", deleted.Cover, err)
 			return err
@@ -102,6 +97,10 @@ func deleteVideoCaches(l *DeleteVideoLogic, vid string) error {
 	}
 	if err := l.svcCtx.CommentCache.DelCount(l.ctx, vid); err != nil {
 		l.Errorf("delete comment count failed, vid=%s, err=%v", vid, err)
+		return err
+	}
+	if err := l.svcCtx.CommentCache.DelRootCount(l.ctx, vid); err != nil {
+		l.Errorf("delete root comment count failed, vid=%s, err=%v", vid, err)
 		return err
 	}
 	if err := l.svcCtx.CommentCache.InvalidateListByVideo(l.ctx, vid); err != nil {
