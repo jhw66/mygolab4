@@ -59,6 +59,19 @@ func (l *CommentLogic) Comment(req *types.CommentAddReq) (resp *types.CommonRsp,
 		}
 	}
 
+	if err := core.WarmUpCommentCount(l.ctx, l.svcCtx.CommentCache, l.svcCtx.CommentRepo, req.Vid); err != nil {
+		l.Errorf("warmup comment count failed, vid=%s, err=%v", req.Vid, err)
+	}
+	if rootID == nil {
+		if err := core.WarmUpRootCommentCount(l.ctx, l.svcCtx.CommentCache, l.svcCtx.CommentRepo, req.Vid); err != nil {
+			l.Errorf("warmup root comment count failed, vid=%s, err=%v", req.Vid, err)
+		}
+	} else {
+		if err := core.WarmUpReplyCommentCount(l.ctx, l.svcCtx.CommentCache, l.svcCtx.CommentRepo, req.Vid, *rootID); err != nil {
+			l.Errorf("warmup reply comment count failed, root_id=%s, err=%v", *rootID, err)
+		}
+	}
+
 	if err = l.svcCtx.CommentRepo.Create(l.ctx, &model.Comment{
 		UserID:    user.ID,
 		VideoID:   req.Vid,
@@ -69,18 +82,11 @@ func (l *CommentLogic) Comment(req *types.CommentAddReq) (resp *types.CommonRsp,
 		return nil, errors.New("评论保存失败")
 	}
 
-	if err := core.WarmUpCommentCount(l.ctx, l.svcCtx.CommentCache, l.svcCtx.CommentRepo, req.Vid); err != nil {
-		l.Errorf("warmup comment count failed, vid=%s, err=%v", req.Vid, err)
-	}
-
 	if err := l.svcCtx.CommentCache.IncrCount(l.ctx, req.Vid); err != nil {
 		l.Errorf("incr comment count failed, vid=%s, err=%v", req.Vid, err)
 	}
 
 	if rootID == nil {
-		if err := core.WarmUpRootCommentCount(l.ctx, l.svcCtx.CommentCache, l.svcCtx.CommentRepo, req.Vid); err != nil {
-			l.Errorf("warmup root comment count failed, vid=%s, err=%v", req.Vid, err)
-		}
 		if err := l.svcCtx.CommentCache.IncrRootCount(l.ctx, req.Vid); err != nil {
 			l.Errorf("incr root comment count failed, vid=%s, err=%v", req.Vid, err)
 		}
@@ -88,9 +94,6 @@ func (l *CommentLogic) Comment(req *types.CommentAddReq) (resp *types.CommonRsp,
 			l.Errorf("invalidate root comment list cache failed, vid=%s, err=%v", req.Vid, err)
 		}
 	} else {
-		if err := core.WarmUpReplyCommentCount(l.ctx, l.svcCtx.CommentCache, l.svcCtx.CommentRepo, req.Vid, *rootID); err != nil {
-			l.Errorf("warmup reply comment count failed, root_id=%s, err=%v", *rootID, err)
-		}
 		if err := l.svcCtx.CommentCache.IncrReplyCount(l.ctx, *rootID); err != nil {
 			l.Errorf("incr reply comment count failed, root_id=%s, err=%v", *rootID, err)
 		}

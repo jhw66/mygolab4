@@ -99,10 +99,6 @@ func deleteVideoCaches(l *DeleteVideoLogic, vid string) error {
 		l.Errorf("delete comment count failed, vid=%s, err=%v", vid, err)
 		return err
 	}
-	if err := l.svcCtx.CommentCache.DelRootCount(l.ctx, vid); err != nil {
-		l.Errorf("delete root comment count failed, vid=%s, err=%v", vid, err)
-		return err
-	}
 	if err := l.svcCtx.CommentCache.InvalidateListByVideo(l.ctx, vid); err != nil {
 		l.Errorf("invalidate comment list failed, vid=%s, err=%v", vid, err)
 		return err

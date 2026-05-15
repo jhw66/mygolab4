@@ -6,8 +6,8 @@ import (
 
 	"github.com/jhw66/myvideo_lab4/internal/svc"
 	"github.com/jhw66/myvideo_lab4/pkg/cache/cacherepo"
-	commentrepo "github.com/jhw66/myvideo_lab4/pkg/db/repository/comment"
-	commentfavoriterepo "github.com/jhw66/myvideo_lab4/pkg/db/repository/commentfavorite"
+	"github.com/jhw66/myvideo_lab4/pkg/db/repository/comment"
+	"github.com/jhw66/myvideo_lab4/pkg/db/repository/commentfavorite"
 	"github.com/jhw66/myvideo_lab4/pkg/db/repository/favorite"
 	"github.com/redis/go-redis/v9"
 	"github.com/zeromicro/go-zero/core/logx"
@@ -154,7 +154,7 @@ func SyncDirtyCommentFavoriteStats(ctx context.Context, svcCtx *svc.ServiceConte
 		batchSize = DefaultSyncBatchSize
 	}
 
-	dirtyCommentIDs, err := svcCtx.CommentCache.ListDirtyFavoriteCount(ctx)
+	dirtyCommentIDs, err := svcCtx.FavoriteCache.ListDirtyCommentFavoriteCount(ctx)
 	if err != nil {
 		return err
 	}
@@ -167,11 +167,11 @@ func SyncDirtyCommentFavoriteStats(ctx context.Context, svcCtx *svc.ServiceConte
 
 	success := make([]interface{}, 0, len(dirtyCommentIDs))
 	for _, commentID := range dirtyCommentIDs {
-		if err := WarmUpCommentFavoriteCount(ctx, svcCtx.CommentCache, svcCtx.CommentFavoriteRepo, commentID); err != nil {
+		if err := WarmUpCommentFavoriteCount(ctx, svcCtx.FavoriteCache, svcCtx.CommentFavoriteRepo, commentID); err != nil {
 			logx.WithContext(ctx).Errorf("sync warmup comment favorite failed, cid=%s, err=%v", commentID, err)
 			continue
 		}
-		favoriteCount, err := svcCtx.CommentCache.GetFavoriteCount(ctx, commentID)
+		favoriteCount, err := svcCtx.FavoriteCache.GetCommentFavoriteCount(ctx, commentID)
 		if err != nil {
 			logx.WithContext(ctx).Errorf("sync get comment favorite cache failed, cid=%s, err=%v", commentID, err)
 			continue
@@ -183,7 +183,7 @@ func SyncDirtyCommentFavoriteStats(ctx context.Context, svcCtx *svc.ServiceConte
 		success = append(success, commentID)
 	}
 
-	return svcCtx.CommentCache.RemoveDirtyFavoriteCountBatch(ctx, success)
+	return svcCtx.FavoriteCache.RemoveDirtyCommentFavoriteCountBatch(ctx, success)
 }
 
 func StartCommentFavoriteStatSync(ctx context.Context, svcCtx *svc.ServiceContext, interval time.Duration, batchSize int) {
@@ -230,7 +230,7 @@ func WarmUpFavoriteCount(ctx context.Context, cc cacherepo.FavoriteCache, favori
 	return cc.SetCount(ctx, vid, count, favoriteCountTTL)
 }
 
-func WarmUpCommentCount(ctx context.Context, cc cacherepo.CommentCache, commentRepo commentrepo.CommentRepository, vid string) error {
+func WarmUpCommentCount(ctx context.Context, cc cacherepo.CommentCache, commentRepo comment.CommentRepository, vid string) error {
 	exists, _ := cc.ExistsCount(ctx, vid)
 	if exists {
 		return nil
@@ -251,7 +251,7 @@ func WarmUpCommentCount(ctx context.Context, cc cacherepo.CommentCache, commentR
 	return cc.SetCount(ctx, vid, count, commentCountTTL)
 }
 
-func WarmUpRootCommentCount(ctx context.Context, cc cacherepo.CommentCache, commentRepo commentrepo.CommentRepository, vid string) error {
+func WarmUpRootCommentCount(ctx context.Context, cc cacherepo.CommentCache, commentRepo comment.CommentRepository, vid string) error {
 	exists, _ := cc.ExistsRootCount(ctx, vid)
 	if exists {
 		return nil
@@ -271,7 +271,7 @@ func WarmUpRootCommentCount(ctx context.Context, cc cacherepo.CommentCache, comm
 	return cc.SetRootCount(ctx, vid, count, commentCountTTL)
 }
 
-func WarmUpReplyCommentCount(ctx context.Context, cc cacherepo.CommentCache, commentRepo commentrepo.CommentRepository, vid string, rootID string) error {
+func WarmUpReplyCommentCount(ctx context.Context, cc cacherepo.CommentCache, commentRepo comment.CommentRepository, vid string, rootID string) error {
 	exists, _ := cc.ExistsReplyCount(ctx, rootID)
 	if exists {
 		return nil
@@ -291,16 +291,16 @@ func WarmUpReplyCommentCount(ctx context.Context, cc cacherepo.CommentCache, com
 	return cc.SetReplyCount(ctx, rootID, count, commentCountTTL)
 }
 
-func WarmUpCommentFavoriteCount(ctx context.Context, cc cacherepo.CommentCache, commentFavoriteRepo commentfavoriterepo.CommentFavoriteRepository, commentID string) error {
-	exists, _ := cc.ExistsFavoriteCount(ctx, commentID)
+func WarmUpCommentFavoriteCount(ctx context.Context, cc cacherepo.FavoriteCache, commentFavoriteRepo commentfavorite.CommentFavoriteRepository, commentID string) error {
+	exists, _ := cc.ExistsCommentFavoriteCount(ctx, commentID)
 	if exists {
 		return nil
 	}
-	if !cc.TryWarmupLock(ctx, "comment_favorite_count:"+commentID, 5*time.Second) {
+	if !cc.TryCommentFavoriteWarmupLock(ctx, commentID, 5*time.Second) {
 		time.Sleep(100 * time.Millisecond)
 		return nil
 	}
-	exists, _ = cc.ExistsFavoriteCount(ctx, commentID)
+	exists, _ = cc.ExistsCommentFavoriteCount(ctx, commentID)
 	if exists {
 		return nil
 	}
@@ -308,5 +308,5 @@ func WarmUpCommentFavoriteCount(ctx context.Context, cc cacherepo.CommentCache, 
 	if err != nil {
 		return err
 	}
-	return cc.SetFavoriteCount(ctx, commentID, count, commentCountTTL)
+	return cc.SetCommentFavoriteCount(ctx, commentID, count, commentCountTTL)
 }

@@ -70,7 +70,7 @@ func (l *DelCommentLogic) DelComment(req *types.DelCommentReq) (resp *types.Comm
 			l.Errorf("invalidate reply comment list cache failed, root_id=%s, err=%v", *comment.RootID, err)
 		}
 	}
-	if err := l.svcCtx.CommentCache.DelFavoriteCount(l.ctx, comment.ID); err != nil {
+	if err := l.svcCtx.FavoriteCache.DelCommentFavoriteCount(l.ctx, comment.ID); err != nil {
 		l.Errorf("delete comment favorite count failed, cid=%s, err=%v", comment.ID, err)
 	}
 

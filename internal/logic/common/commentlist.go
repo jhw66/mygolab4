@@ -57,7 +57,6 @@ func (l *CommentListLogic) CommentList(req *types.CommentListReq) (resp *types.C
 	if cachedComments, err := l.svcCtx.CommentCache.GetList(l.ctx, req.Vid, req.CommentId, page, pageSize); err == nil {
 		var data cachemodel.CommentListCacheData
 		if err := json.Unmarshal([]byte(cachedComments), &data); err == nil {
-			l.fillCommentFavoriteCounts(data.Comments)
 			return serializer.CommentListRspFromModels(data.Comments, data.Total, page, pageSize), nil
 		}
 	}
@@ -72,7 +71,7 @@ func (l *CommentListLogic) CommentList(req *types.CommentListReq) (resp *types.C
 		return nil, errors.New("查询评论失败")
 	}
 
-	l.fillCommentFavoriteCounts(comments)
+	l.setFavoriteByCache(comments)
 	total := l.getCachedListTotal(req)
 	cacheData := cachemodel.CommentListCacheData{
 		Comments: comments,
@@ -86,14 +85,14 @@ func (l *CommentListLogic) CommentList(req *types.CommentListReq) (resp *types.C
 	return serializer.CommentListRspFromModels(comments, total, page, pageSize), nil
 }
 
-func (l *CommentListLogic) fillCommentFavoriteCounts(comments []model.Comment) {
+func (l *CommentListLogic) setFavoriteByCache(comments []model.Comment) {
 	for i := range comments {
 		commentID := comments[i].ID
-		if err := core.WarmUpCommentFavoriteCount(l.ctx, l.svcCtx.CommentCache, l.svcCtx.CommentFavoriteRepo, commentID); err != nil {
+		if err := core.WarmUpCommentFavoriteCount(l.ctx, l.svcCtx.FavoriteCache, l.svcCtx.CommentFavoriteRepo, commentID); err != nil {
 			l.Errorf("warmup comment favorite count failed, cid=%s, err=%v", commentID, err)
 			continue
 		}
-		count, err := l.svcCtx.CommentCache.GetFavoriteCount(l.ctx, commentID)
+		count, err := l.svcCtx.FavoriteCache.GetCommentFavoriteCount(l.ctx, commentID)
 		if err != nil {
 			l.Errorf("get comment favorite count cache failed, cid=%s, err=%v", commentID, err)
 			continue
