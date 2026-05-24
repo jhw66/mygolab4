@@ -16,8 +16,8 @@ type Video struct {
 	CreatedAt     int64  `json:"created_at"`
 }
 
-func VideoItemFromModel(video *model.Video) types.VideoItem {
-	return types.VideoItem{
+func VideoItemFromModel(video *model.Video) *types.VideoItem {
+	return &types.VideoItem{
 		Id:            video.ID,
 		Title:         video.Title,
 		Url:           video.URL,
@@ -33,14 +33,14 @@ func VideoRspFromModel(video *model.Video) *types.VideoRsp {
 	item := VideoItemFromModel(video)
 	return &types.VideoRsp{
 		Status: 200,
-		Data:   &item,
+		Data:   item,
 	}
 }
 
 func VideoListRspFromModels(videos []model.Video) *types.VideoListRsp {
 	items := make([]types.VideoItem, 0, len(videos))
 	for i := range videos {
-		items = append(items, VideoItemFromModel(&videos[i]))
+		items = append(items, *VideoItemFromModel(&videos[i]))
 	}
 	return &types.VideoListRsp{
 		Status: 200,

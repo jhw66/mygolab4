@@ -229,3 +229,86 @@ type VideoRsp struct {
 type VideoSearchReq struct {
 	KeyWord string `form:"key_word"`
 }
+
+type ChatReq struct {
+	RoomID string `path:"room_id"`
+}
+
+type ChatRoomItem struct {
+	ID         string `json:"id"`
+	RoomName   string `json:"room_name"`
+	Visibility string `json:"visibility"`
+	OwnerID    string `json:"owner_id"`
+	CreatedAt  int64  `json:"created_at"`
+}
+
+type GetRoomResp struct {
+	Status int             `json:"status"`
+	Data   *[]ChatRoomItem `json:"data,omitempty"`
+	Msg    string          `json:"msg,omitempty"`
+	Error  string          `json:"error,omitempty"`
+}
+
+type AddRoomReq struct {
+	RoomName   string `json:"room_name"`
+	Visibility string `json:"visibility"`
+	Password   string `json:"password,optional"`
+}
+
+type AddRoomResp struct {
+	Status int           `json:"status"`
+	Data   *ChatRoomItem `json:"data,omitempty"`
+	Msg    string        `json:"msg,omitempty"`
+	Error  string        `json:"error,omitempty"`
+}
+
+type AddMemberReq struct {
+	RoomID string `path:"room_id"`
+	UserID string `json:"user_id"`
+	Role   string `json:"role"`
+}
+
+type AddMemberResp struct {
+	Status int    `json:"status"`
+	Msg    string `json:"msg,omitempty"`
+	Error  string `json:"error,omitempty"`
+}
+
+type JoinRoomReq struct {
+	RoomID   string `path:"room_id"`
+	Password string `json:"password,optional"`
+}
+
+type JoinRoomResp struct {
+	Status int    `json:"status"`
+	Msg    string `json:"msg,omitempty"`
+	Error  string `json:"error,omitempty"`
+}
+
+type ChatMessageItem struct {
+	ID        string `json:"id"`
+	RoomID    string `json:"room_id"`
+	UserID    string `json:"user_id"`
+	Content   string `json:"content"`
+	CreatedAt int64  `json:"created_at"`
+}
+
+type ChatMessageListData struct {
+	Total    int64              `json:"total"`
+	Page     int                `json:"page"`
+	PageSize int                `json:"page_size"`
+	Messages *[]ChatMessageItem `json:"messages,omitempty"`
+}
+
+type GetMessagesReq struct {
+	RoomID   string `path:"room_id"`
+	Page     int    `form:"page,optional"`
+	PageSize int    `form:"page_size,optional"`
+}
+
+type GetMessagesResp struct {
+	Status int                  `json:"status"`
+	Data   *ChatMessageListData `json:"data,omitempty"`
+	Msg    string               `json:"msg,omitempty"`
+	Error  string               `json:"error,omitempty"`
+}

@@ -5,14 +5,6 @@ import (
 	"github.com/jhw66/myvideo_lab4/pkg/db/model"
 )
 
-type User struct {
-	ID        string `json:"id"`
-	UserName  string `json:"username"`
-	NickName  string `json:"nickname"`
-	CreatedAt int64  `json:"created_at"`
-	Avatar    string `json:"avatar"`
-}
-
 func UserItemFromModel(user *model.User) types.UserItem {
 	return types.UserItem{
 		Id:        user.ID,

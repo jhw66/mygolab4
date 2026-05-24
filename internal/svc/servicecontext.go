@@ -11,6 +11,7 @@ import (
 	"github.com/jhw66/myvideo_lab4/pkg/cache/cachemodel"
 	"github.com/jhw66/myvideo_lab4/pkg/cache/cacherepo"
 	"github.com/jhw66/myvideo_lab4/pkg/db/model"
+	"github.com/jhw66/myvideo_lab4/pkg/db/repository/chat"
 	"github.com/jhw66/myvideo_lab4/pkg/db/repository/comment"
 	"github.com/jhw66/myvideo_lab4/pkg/db/repository/commentfavorite"
 	"github.com/jhw66/myvideo_lab4/pkg/db/repository/favorite"
@@ -18,15 +19,13 @@ import (
 	"github.com/jhw66/myvideo_lab4/pkg/db/repository/transaction"
 	"github.com/jhw66/myvideo_lab4/pkg/db/repository/user"
 	"github.com/jhw66/myvideo_lab4/pkg/db/repository/video"
-	"github.com/redis/go-redis/v9"
+	"github.com/jhw66/myvideo_lab4/pkg/webchat"
 	"github.com/zeromicro/go-zero/rest"
-	"gorm.io/gorm"
 )
 
 type ServiceContext struct {
 	Config                config.Config
-	GormDB                *gorm.DB
-	Redis                 *redis.Client
+	ChatHub               *webchat.Hub
 	AccessAuth            rest.Middleware
 	UserRepo              user.UserRepository
 	VideoRepo             video.VideoRepository
@@ -35,9 +34,11 @@ type ServiceContext struct {
 	FavoriteRepo          favorite.FavoriteRepository
 	RelationRepo          relation.RelationRepository
 	TransactionRepository transaction.TransactionRepository
+	ChatRepo              chat.ChatRepository
 	CommentCache          cacherepo.CommentCache
 	FavoriteCache         cacherepo.FavoriteCache
 	RankCache             cacherepo.RankCache
+	ChatCache             cacherepo.ChatCache
 	//SessionAccount rest.Middleware
 	//AuthLogin      rest.Middleware
 }
@@ -57,8 +58,7 @@ func NewServiceContext(c config.Config) *ServiceContext {
 
 	return &ServiceContext{
 		Config:                c,
-		GormDB:                gormDB,
-		Redis:                 rdb,
+		ChatHub:               webchat.NewHub(),
 		AccessAuth:            middleware.NewAccessAuthMiddleware(userRepo, c).Handle,
 		UserRepo:              userRepo,
 		VideoRepo:             video.NewVideoRepository(gormDB),
@@ -67,9 +67,11 @@ func NewServiceContext(c config.Config) *ServiceContext {
 		FavoriteRepo:          favorite.NewFavoriteRepository(gormDB),
 		RelationRepo:          relation.NewRelationRepository(gormDB),
 		TransactionRepository: transaction.NewTransactionRepository(gormDB),
+		ChatRepo:              chat.NewChatRepository(gormDB),
 		CommentCache:          cacherepo.NewCommentCache(rdb),
 		FavoriteCache:         cacherepo.NewFavoriteCache(rdb),
 		RankCache:             cacherepo.NewRankCache(rdb),
+		ChatCache:             cacherepo.NewChatCache(rdb),
 		//SessionAccount: middleware.NewSessionAccountMiddleware("").Handle,
 		//AuthLogin:      middleware.NewAuthLoginMiddleware().Handle,
 	}
