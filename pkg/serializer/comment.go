@@ -5,24 +5,19 @@ import (
 	"github.com/jhw66/myvideo_lab4/pkg/db/model"
 )
 
-type Comment struct {
-	ID            string `json:"id"`
-	UserID        string `json:"user_id"`
-	VideoID       string `json:"video_id"`
-	CommentID     string `json:"comment_id,omitempty"`
-	RootID        string `json:"root_id,omitempty"`
-	Content       string `json:"content"`
-	FavoriteCount uint   `json:"favorite_count"`
-	IsDeleted     bool   `json:"is_deleted"`
-	CreatedAt     int64  `json:"created_at"`
-	User          User   `json:"user"`
-}
-
-type CommentList struct {
-	Total    int64     `json:"total"`
-	Page     int       `json:"page"`
-	PageSize int       `json:"page_size"`
-	Comments []Comment `json:"comments"`
+func CommentItemFromModel(comment *model.Comment, content string, favoriteCount uint) *types.CommentItem {
+	return &types.CommentItem{
+		Id:            comment.ID,
+		UserId:        comment.UserID,
+		VideoId:       comment.VideoID,
+		CommentId:     stringValue(comment.CommentID),
+		RootId:        stringValue(comment.RootID),
+		Content:       content,
+		FavoriteCount: favoriteCount,
+		IsDeleted:     comment.DeletedAt.Valid,
+		CreatedAt:     comment.CreatedAt.Unix(),
+		User:          UserItemFromModel(&comment.User),
+	}
 }
 
 func CommentListRspFromModels(comments []model.Comment, total int64, page int, pageSize int) *types.CommentListRsp {
@@ -35,18 +30,7 @@ func CommentListRspFromModels(comments []model.Comment, total int64, page int, p
 			content = "该评论已删除"
 			favoriteCount = 0
 		}
-		items = append(items, types.CommentItem{
-			Id:            comments[i].ID,
-			UserId:        comments[i].UserID,
-			VideoId:       comments[i].VideoID,
-			CommentId:     stringValue(comments[i].CommentID),
-			RootId:        stringValue(comments[i].RootID),
-			Content:       content,
-			FavoriteCount: favoriteCount,
-			IsDeleted:     isDeleted,
-			CreatedAt:     comments[i].CreatedAt.Unix(),
-			User:          UserItemFromModel(&comments[i].User),
-		})
+		items = append(items, *CommentItemFromModel(&comments[i], content, favoriteCount))
 	}
 	return &types.CommentListRsp{
 		Status: 200,

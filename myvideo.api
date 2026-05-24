@@ -198,6 +198,76 @@ type (
 	RelationReq {
 		Uid string `path:"uid"`
 	}
+	ChatReq {
+		RoomID string `path:"room_id"`
+	}
+	ChatRoomItem {
+		ID         string `json:"id"`
+		RoomName   string `json:"room_name"`
+		Visibility string `json:"visibility"`
+		OwnerID    string `json:"owner_id"`
+		CreatedAt  int64  `json:"created_at"`
+	}
+	GetRoomResp {
+		Status int             `json:"status"`
+		Data   *[]ChatRoomItem `json:"data,omitempty"`
+		Msg    string          `json:"msg,omitempty"`
+		Error  string          `json:"error,omitempty"`
+	}
+	AddRoomReq {
+		RoomName   string `json:"room_name"`
+		Visibility string `json:"visibility"`
+		Password   string `json:"password,optional"`
+	}
+	AddRoomResp {
+		Status int           `json:"status"`
+		Data   *ChatRoomItem `json:"data,omitempty"`
+		Msg    string        `json:"msg,omitempty"`
+		Error  string        `json:"error,omitempty"`
+	}
+	AddMemberReq {
+		RoomID string `path:"room_id"`
+		UserID string `json:"user_id"`
+		Role   string `json:"role"`
+	}
+	AddMemberResp {
+		Status int    `json:"status"`
+		Msg    string `json:"msg,omitempty"`
+		Error  string `json:"error,omitempty"`
+	}
+	JoinRoomReq {
+		RoomID   string `path:"room_id"`
+		Password string `json:"password,optional"`
+	}
+	JoinRoomResp {
+		Status int    `json:"status"`
+		Msg    string `json:"msg,omitempty"`
+		Error  string `json:"error,omitempty"`
+	}
+	ChatMessageItem {
+		ID        string `json:"id"`
+		RoomID    string `json:"room_id"`
+		UserID    string `json:"user_id"`
+		Content   string `json:"content"`
+		CreatedAt int64  `json:"created_at"`
+	}
+	ChatMessageListData {
+		Total    int64              `json:"total"`
+		Page     int                `json:"page"`
+		PageSize int                `json:"page_size"`
+		Messages *[]ChatMessageItem `json:"messages,omitempty"`
+	}
+	GetMessagesReq {
+		RoomID   string `path:"room_id"`
+		Page     int    `form:"page,optional"`
+		PageSize int    `form:"page_size,optional"`
+	}
+	GetMessagesResp {
+		Status int                  `json:"status"`
+		Data   *ChatMessageListData `json:"data,omitempty"`
+		Msg    string               `json:"msg,omitempty"`
+		Error  string               `json:"error,omitempty"`
+	}
 )
 
 // ==================== 公开路由 ====================
@@ -333,5 +403,37 @@ service myvideo-api {
 
 	@handler FriendList
 	get /friend returns (UserListRsp)
+}
+
+@server (
+	prefix:     /ws
+	group:      chat
+	middleware: AccessAuth
+)
+service myvideo-api {
+	@handler Chat
+	get /:room_id (ChatReq)
+}
+
+@server (
+	prefix:     /rooms
+	group:      chat
+	middleware: AccessAuth
+)
+service myvideo-api {
+	@handler GetRoom
+	get / returns (GetRoomResp)
+
+	@handler AddRoom
+	post / (AddRoomReq) returns (AddRoomResp)
+
+	@handler AddMember
+	post /:room_id/addmember (AddMemberReq) returns (AddMemberResp)
+
+	@handler JoinRoom
+	post /:room_id/join (JoinRoomReq) returns (JoinRoomResp)
+
+	@handler GetMessage
+	get /:room_id/messages (GetMessagesReq) returns (GetMessagesResp)
 }
 

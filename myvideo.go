@@ -30,6 +30,10 @@ func main() {
 	defer server.Stop()
 
 	ctx := svc.NewServiceContext(c)
+
+	go ctx.ChatHub.Run(context.Background(), ctx.ChatRepo, ctx.ChatCache)
+	defer ctx.ChatHub.Stop()
+
 	handler.RegisterHandlers(server, ctx)
 
 	if err := core.WarmUpRankZSet(context.Background(), ctx); err != nil {

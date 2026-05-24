@@ -6,13 +6,14 @@ package handler
 import (
 	"net/http"
 
-	comment "github.com/jhw66/myvideo_lab4/internal/handler/comment"
-	common "github.com/jhw66/myvideo_lab4/internal/handler/common"
-	favorite "github.com/jhw66/myvideo_lab4/internal/handler/favorite"
-	relation "github.com/jhw66/myvideo_lab4/internal/handler/relation"
-	totp "github.com/jhw66/myvideo_lab4/internal/handler/totp"
-	user "github.com/jhw66/myvideo_lab4/internal/handler/user"
-	video "github.com/jhw66/myvideo_lab4/internal/handler/video"
+	"github.com/jhw66/myvideo_lab4/internal/handler/chat"
+	"github.com/jhw66/myvideo_lab4/internal/handler/comment"
+	"github.com/jhw66/myvideo_lab4/internal/handler/common"
+	"github.com/jhw66/myvideo_lab4/internal/handler/favorite"
+	"github.com/jhw66/myvideo_lab4/internal/handler/relation"
+	"github.com/jhw66/myvideo_lab4/internal/handler/totp"
+	"github.com/jhw66/myvideo_lab4/internal/handler/user"
+	"github.com/jhw66/myvideo_lab4/internal/handler/video"
 	"github.com/jhw66/myvideo_lab4/internal/svc"
 
 	"github.com/zeromicro/go-zero/rest"
@@ -216,6 +217,54 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 			}...,
 		),
 		rest.WithPrefix("/api/v1/p/video"),
+	)
+
+	server.AddRoutes(
+		rest.WithMiddlewares(
+			[]rest.Middleware{serverCtx.AccessAuth},
+			[]rest.Route{
+				{
+					Method:  http.MethodGet,
+					Path:    "/:room_id",
+					Handler: chat.ChatHandler(serverCtx),
+				},
+			}...,
+		),
+		rest.WithPrefix("/ws"),
+	)
+
+	server.AddRoutes(
+		rest.WithMiddlewares(
+			[]rest.Middleware{serverCtx.AccessAuth},
+			[]rest.Route{
+				{
+					Method:  http.MethodGet,
+					Path:    "/",
+					Handler: chat.GetRoomHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodPost,
+					Path:    "/",
+					Handler: chat.AddRoomHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodPost,
+					Path:    "/:room_id/addmember",
+					Handler: chat.AddMemberHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodPost,
+					Path:    "/:room_id/join",
+					Handler: chat.JoinRoomHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodGet,
+					Path:    "/:room_id/messages",
+					Handler: chat.GetMessageHandler(serverCtx),
+				},
+			}...,
+		),
+		rest.WithPrefix("/rooms"),
 	)
 
 	server.AddRoutes(

@@ -17,3 +17,12 @@ func ValidateRuneLength(value string, min, max int) error {
 
 	return nil
 }
+
+func ValidateOptional(value string, optional ...string) error {
+	for _, v := range optional {
+		if value == v {
+			return nil
+		}
+	}
+	return fmt.Errorf("value must be one of the following: %v", optional)
+}
