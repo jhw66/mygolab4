@@ -1,14 +1,13 @@
 package utils
 
 import (
-	"io"
+	"fmt"
 	"mime/multipart"
 	"net/http"
-	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
-	"time"
+
+	"github.com/jhw66/myvideo_lab4/pkg/storage"
 )
 
 func ParseMultipartForm(r *http.Request, maxMemory int64) error {
@@ -52,15 +51,19 @@ func OptionalGetFormFile(r *http.Request, name string) (*multipart.FileHeader, b
 }
 
 func StoreUploadedFile(dir, prefix, ownerID string, file *multipart.FileHeader) (diskPath, webPath string, err error) {
-	if err = os.MkdirAll(dir, os.ModePerm); err != nil {
+	if strings.TrimSpace(dir) == "" || filepath.Base(filepath.Clean(dir)) != prefix {
+		return "", "", fmt.Errorf("upload directory or kind is wrong")
+	}
+	store, err := storage.NewLocalStore(filepath.Dir(filepath.Clean(dir)))
+	if err != nil {
 		return "", "", err
 	}
-	diskPath = buildStoredFilePath(dir, prefix, ownerID, file.Filename)
-	if err = saveMultipartFile(file, diskPath); err != nil {
-		_ = RemoveIfExists(diskPath)
+	defer store.Close()
+	stored, err := store.SaveMultipart(storage.Kind(prefix), ownerID, file)
+	if err != nil {
 		return "", "", err
 	}
-	return diskPath, toWebPath(diskPath), nil
+	return stored.DiskPath, stored.WebPath, nil
 }
 
 func ReplaceStoredFile(dir, prefix, ownerID string, file *multipart.FileHeader, oldWebPath string) (newDiskPath, newWebPath string, cleanupOld func() error, err error) {
@@ -69,73 +72,39 @@ func ReplaceStoredFile(dir, prefix, ownerID string, file *multipart.FileHeader, 
 		return "", "", nil, err
 	}
 	cleanupOld = func() error {
-		return RemoveIfExists(toDiskPath(oldWebPath))
+		return RemoveIfExistsWithUrl(oldWebPath)
 	}
 	return newDiskPath, newWebPath, cleanupOld, nil
-}
-
-func buildStoredFilePath(dir, prefix, ownerID, originalFilename string) string {
-	filename := prefix + "_" + ownerID + "_" + strconvUnix() + filepath.Ext(originalFilename)
-	return filepath.Join(dir, filename)
-}
-
-func saveMultipartFile(file *multipart.FileHeader, dst string) error {
-	src, err := file.Open()
-	if err != nil {
-		return err
-	}
-	defer src.Close()
-
-	out, err := os.Create(dst)
-	if err != nil {
-		return err
-	}
-	defer out.Close()
-
-	_, err = io.Copy(out, src)
-	return err
-}
-
-func toWebPath(path string) string {
-	if path == "" {
-		return ""
-	}
-	webpath := filepath.ToSlash(path)
-	if strings.HasPrefix(webpath, "/") {
-		return webpath
-	}
-	return "/" + webpath
-}
-
-func toDiskPath(webpath string) string {
-	if webpath == "" {
-		return ""
-	}
-	diskpath := strings.TrimPrefix(webpath, "/")
-	return filepath.FromSlash(diskpath)
 }
 
 func RemoveIfExists(diskpath string) error {
 	if diskpath == "" {
 		return nil
 	}
-	if err := os.Remove(diskpath); err != nil {
-		if err == os.ErrNotExist {
-			return nil
-		}
+	store, err := storage.NewLocalStore("static")
+	if err != nil {
 		return err
 	}
-	return nil
+	defer store.Close()
+	path, err := store.RootPathFromDiskPath(diskpath)
+	if err != nil {
+		return err
+	}
+	return store.Remove(path)
 }
 
 func RemoveIfExistsWithUrl(url string) error {
-	diskpath := toDiskPath(url)
-	if err := os.Remove(diskpath); err != nil {
+	if url == "" {
+		return nil
+	}
+	store, err := storage.NewLocalStore("static")
+	if err != nil {
 		return err
 	}
-	return nil
-}
-
-func strconvUnix() string {
-	return strconv.FormatInt(time.Now().Unix(), 10)
+	defer store.Close()
+	path, err := store.RootPathFromWebPath(url)
+	if err != nil {
+		return err
+	}
+	return store.Remove(path)
 }

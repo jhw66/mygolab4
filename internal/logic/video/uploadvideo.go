@@ -49,12 +49,12 @@ func (l *UploadVideoLogic) UploadVideo(r *http.Request) (resp *types.VideoRsp, e
 	}
 	info, _ := utils.GetFormValue(r, "info")
 
-	videoFile, err := utils.GetFormFile(r, "video")
-	if err != nil {
+	videoFile, videoFileExists := utils.OptionalGetFormFile(r, "video")
+	if !videoFileExists {
 		return nil, errors.New("视频文件不能为空")
 	}
-	coverFile, err := utils.GetFormFile(r, "cover")
-	if err != nil {
+	coverFile, coverFileExists := utils.OptionalGetFormFile(r, "cover")
+	if !coverFileExists {
 		return nil, errors.New("封面文件不能为空")
 	}
 

@@ -39,8 +39,8 @@ func (l *UserAvatarLogic) UserAvatar(r *http.Request) (resp *types.UserRsp, err 
 	if err = utils.ParseMultipartForm(r, 32<<20); err != nil {
 		return nil, errors.New("请求格式错误")
 	}
-	file, err := utils.GetFormFile(r, "avatar")
-	if err != nil {
+	file, avatarExists := utils.OptionalGetFormFile(r, "avatar")
+	if !avatarExists {
 		return nil, errors.New("头像文件不能为空")
 	}
 
